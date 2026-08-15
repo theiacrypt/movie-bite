@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-theater-bg: #07090e;
+    --color-primary: #e50914;
+    --color-gold: #f5c518;
+  }
+
+  body {
+    background-color: #07090e;
+    background-image: 
+      radial-gradient(circle at 15% 15%, rgba(229, 9, 20, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.6) 0%, transparent 100%);
+    background-attachment: fixed;
+    color: #f1f5f9;
+  }
+}
+
+/* Custom Glassmorphic Cards */
+.glass-panel {
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.glass-card {
+  background: rgba(22, 31, 51, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(229, 9, 20, 0.4);
+  box-shadow: 0 10px 30px -10px rgba(229, 9, 20, 0.3);
+  transform: translateY(-2px);
+}
+
+.glow-red {
+  box-shadow: 0 0 25px rgba(229, 9, 20, 0.5);
+}
+
+.glow-gold {
+  box-shadow: 0 0 30px rgba(245, 197, 24, 0.5);
+}
+
+/* Smooth custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(11, 15, 25, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(229, 9, 20, 0.5);
+}
+
+/* Shimmer animation for loading cards */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
