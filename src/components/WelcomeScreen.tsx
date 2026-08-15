@@ -150,8 +150,17 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             disabled={loading}
             className="w-full mt-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-cinema-red via-red-600 to-orange-600 hover:from-red-600 hover:to-orange-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-cinema-red/30 active:scale-98 transition-all disabled:opacity-50"
           >
-            <span>{tab === 'create' ? 'Raum öffnen & Freunde einladen' : 'Raum beitreten'}</span>
-            <ArrowRight className="w-4 h-4" />
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>{tab === 'create' ? 'Raum wird erstellt...' : 'Raum wird betreten...'}</span>
+              </>
+            ) : (
+              <>
+                <span>{tab === 'create' ? 'Raum öffnen & Freunde einladen' : 'Raum beitreten'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 
