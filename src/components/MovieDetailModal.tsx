@@ -14,8 +14,12 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({ movie, onClo
   const justWatchUrl = `https://www.justwatch.com/de/suche?q=${encodeURIComponent(movie.title)}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-      <div className="w-full max-w-xl glass-panel rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in">
+      <div 
+        className="fixed -inset-10 bg-black/80 backdrop-blur-md cursor-pointer"
+        onClick={onClose}
+      />
+      <div className="relative z-10 w-full max-w-xl glass-panel rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative flex flex-col max-h-[90vh]">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 text-slate-300 hover:text-white rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-sm transition-colors"

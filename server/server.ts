@@ -46,8 +46,21 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/search', async (req, res) => {
   const query = (req.query.q as string) || '';
+  const genre = (req.query.genre as string) || 'all';
+  const minRating = req.query.minRating ? parseFloat(req.query.minRating as string) : 0;
+  const runtimeCategory = (req.query.runtime as any) || 'all';
+  const soundtrack = req.query.soundtrack === 'true' || req.query.soundtrack === '1';
+  const sortBy = (req.query.sortBy as any) || 'popularity';
+
   try {
-    const results = await searchMovies(query);
+    const results = await searchMovies({
+      query,
+      genre,
+      minRating,
+      runtimeCategory,
+      soundtrack,
+      sortBy
+    });
     res.json({ results });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Fehler bei der Filmsuche' });

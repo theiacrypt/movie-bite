@@ -33,8 +33,12 @@ export const ShareModal: React.FC<ShareModalProps> = ({ roomCode, isOpen, onClos
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}&color=ffffff&bgcolor=111726`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
-      <div className="w-full max-w-md glass-panel rounded-2xl p-6 relative border border-white/10 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in">
+      <div 
+        className="fixed -inset-10 bg-black/75 backdrop-blur-md cursor-pointer"
+        onClick={onClose}
+      />
+      <div className="relative z-10 w-full max-w-md glass-panel rounded-2xl p-6 border border-white/10 shadow-2xl">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-lg bg-theater-900/60 hover:bg-theater-800 transition-colors"

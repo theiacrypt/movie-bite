@@ -9,6 +9,8 @@ export interface Movie {
   rating: number; // 0 - 10
   votesCount?: number;
   runtime?: string;
+  runtimeMinutes?: number;
+  soundtrackHighlight?: string;
   director?: string;
   actors?: string;
   suggestedBy?: {
@@ -79,4 +81,6 @@ export interface SearchMovieResult {
   genre: string[];
   rating: number;
   runtime?: string;
+  runtimeMinutes?: number;
+  soundtrackHighlight?: string;
 }
