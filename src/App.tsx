@@ -12,7 +12,11 @@ import { FavoritesModal } from './components/FavoritesModal.js';
 import { Movie } from './types/game.js';
 import { useRoom } from './hooks/useRoom.js';
 
+import { LegalModal } from './components/LegalModal.js';
+
 export function App() {
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState<'impressum' | 'datenschutz' | 'tmdb'>('impressum');
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
@@ -145,14 +149,41 @@ export function App() {
 
       {/* Footer */}
       <footer className="border-t border-white/5 py-5 px-6 text-center text-xs text-slate-400 bg-theater-950/60">
-        <p className="max-w-4xl mx-auto flex items-center justify-center gap-2 flex-wrap text-slate-400">
-          <span>Movie-Bite</span>
-          <span>•</span>
-          <span className="text-slate-300 font-medium">movie-bite.suppenstudios.work</span>
-          <span>•</span>
-          <span>Filmabende gemeinsam entscheiden</span>
-        </p>
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-400">
+          <p className="flex items-center gap-2 flex-wrap">
+            <span>© {new Date().getFullYear()} Movie-Bite</span>
+            <span>•</span>
+            <span className="text-slate-300 font-medium">Suppenstudios</span>
+          </p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => { setLegalTab('impressum'); setLegalModalOpen(true); }}
+              className="text-slate-400 hover:text-slate-200 transition underline underline-offset-4"
+            >
+              Impressum
+            </button>
+            <button
+              onClick={() => { setLegalTab('datenschutz'); setLegalModalOpen(true); }}
+              className="text-slate-400 hover:text-slate-200 transition underline underline-offset-4"
+            >
+              Datenschutz
+            </button>
+            <button
+              onClick={() => { setLegalTab('tmdb'); setLegalModalOpen(true); }}
+              className="text-slate-400 hover:text-slate-200 transition underline underline-offset-4"
+            >
+              TMDB Lizenz
+            </button>
+          </div>
+        </div>
       </footer>
+
+      {/* Legal Modal */}
+      <LegalModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalTab}
+      />
     </div>
   );
 }
