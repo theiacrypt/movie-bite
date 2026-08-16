@@ -74,7 +74,7 @@ export const Round2Voting: React.FC<Round2VotingProps> = ({
             Favoriten wählen & abstimmen
           </h2>
           <p className="text-sm text-slate-400 mt-1">
-            Gib jedem Film deine Stimme. Verwende ❤️ Like, 👎 Dislike oder deinen 1x ⭐ Super-Vote!
+            Gib jedem Film deine Stimme mit Like, Dislike oder deinem 1x Super-Vote!
           </p>
         </div>
 
@@ -209,10 +209,22 @@ export const Round2Voting: React.FC<Round2VotingProps> = ({
                   {votes[currentMovie.id] && (
                     <div className="p-3 rounded-2xl bg-theater-900 border border-white/10 text-center">
                       <span className="text-xs text-slate-400">Deine Wahl für diesen Film: </span>
-                      <span className="text-xs font-bold uppercase tracking-wider text-white">
-                        {votes[currentMovie.id] === 'like' && '❤️ Like (+1)'}
-                        {votes[currentMovie.id] === 'dislike' && '👎 Dislike (-1)'}
-                        {votes[currentMovie.id] === 'superlike' && '⭐ Super-Vote (+2)'}
+                      <span className="text-xs font-bold uppercase tracking-wider text-white inline-flex items-center gap-1.5 ml-1">
+                        {votes[currentMovie.id] === 'like' && (
+                          <span className="text-emerald-400 inline-flex items-center gap-1">
+                            <Heart className="w-3.5 h-3.5 fill-emerald-400 inline" /> Like (+1)
+                          </span>
+                        )}
+                        {votes[currentMovie.id] === 'dislike' && (
+                          <span className="text-red-400 inline-flex items-center gap-1">
+                            <ThumbsDown className="w-3.5 h-3.5 inline" /> Dislike (-1)
+                          </span>
+                        )}
+                        {votes[currentMovie.id] === 'superlike' && (
+                          <span className="text-yellow-400 inline-flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5 fill-yellow-400 inline" /> Super-Vote (+2)
+                          </span>
+                        )}
                       </span>
                     </div>
                   )}

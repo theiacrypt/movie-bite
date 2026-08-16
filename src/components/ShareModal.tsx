@@ -25,7 +25,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ roomCode, isOpen, onClos
   };
 
   const handleWhatsApp = () => {
-    const text = encodeURIComponent(`🍿 Komm in meinen Movie-Bite Raum (${roomCode}) und stimme mit ab, was wir heute schauen!\n👉 ${shareUrl}`);
+    const text = encodeURIComponent(`Komm in meinen Movie-Bite Raum (${roomCode}) und stimme mit ab, was wir heute schauen:\n${shareUrl}`);
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
 

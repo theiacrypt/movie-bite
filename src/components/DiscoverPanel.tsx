@@ -3,7 +3,8 @@ import {
   Search, Film, Users, Heart, UserPlus, UserMinus, Star,
   X, Loader2, Clapperboard, Sparkles, Crown, TrendingUp
 } from 'lucide-react';
-import { suppenstudiosAuth, getBackendBaseUrl, UserSearchResult, FavoriteMovie, User } from '../services/suppenstudiosAuth.js';
+import { suppenstudiosAuth, UserSearchResult, FavoriteMovie, User } from '../services/suppenstudiosAuth.js';
+import { searchMoviesUniversal } from '../services/movieSearch.js';
 import { soundFx } from '../services/soundEffects.js';
 
 interface MovieResult {
@@ -53,7 +54,7 @@ export const DiscoverPanel: React.FC<DiscoverPanelProps> = ({ onOpenAuth, onOpen
 
   // Debounce query
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query), 380);
+    const t = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(t);
   }, [query]);
 
@@ -66,18 +67,18 @@ export const DiscoverPanel: React.FC<DiscoverPanelProps> = ({ onOpenAuth, onOpen
     setMovieLoading(true);
     setMovieError(null);
 
-    const base = getBackendBaseUrl();
-    const params = new URLSearchParams({ q: debouncedQuery.trim() });
-    fetch(`${base}/api/search?${params}`)
-      .then(r => r.json())
-      .then(data => {
+    searchMoviesUniversal({ query: debouncedQuery.trim() })
+      .then(results => {
         if (!cancelled) {
-          setMovieResults(data.results?.slice(0, 12) ?? []);
+          setMovieResults((results || []).slice(0, 16));
           setMovieLoading(false);
         }
       })
       .catch(() => {
-        if (!cancelled) { setMovieError('Suche fehlgeschlagen'); setMovieLoading(false); }
+        if (!cancelled) {
+          setMovieError('Suche fehlgeschlagen');
+          setMovieLoading(false);
+        }
       });
 
     return () => { cancelled = true; };

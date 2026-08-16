@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Film, Share2, Users, User, ShieldCheck, Heart } from 'lucide-react';
+import { Film, Share2, Users, User, ShieldCheck, Heart, Trophy } from 'lucide-react';
 import { suppenstudiosAuth, User as AuthUser } from '../services/suppenstudiosAuth.js';
 
 interface HeaderProps {
@@ -40,13 +40,18 @@ export const Header: React.FC<HeaderProps> = ({
   const getPhaseBadge = () => {
     switch (phase) {
       case 'LOBBY':
-        return <span className="bg-theater-800 text-slate-300 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border border-white/10">Lobby</span>;
+        return <span className="bg-theater-800 text-slate-300 px-3 py-1 rounded-full text-xs font-semibold tracking-wide border border-white/10">Lobby</span>;
       case 'ROUND_1_SUGGEST':
-        return <span className="bg-cinema-purple/20 text-purple-300 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border border-cinema-purple/30 animate-pulse">Runde 1: Vorschläge</span>;
+        return <span className="bg-cinema-purple/20 text-purple-300 px-3 py-1 rounded-full text-xs font-semibold tracking-wide border border-cinema-purple/30 animate-pulse">Runde 1: Vorschläge</span>;
       case 'ROUND_2_VOTE':
-        return <span className="bg-cinema-red/20 text-red-300 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border border-cinema-red/30 animate-pulse">Runde 2: Voting</span>;
+        return <span className="bg-cinema-red/20 text-red-300 px-3 py-1 rounded-full text-xs font-semibold tracking-wide border border-cinema-red/30 animate-pulse">Runde 2: Voting</span>;
       case 'WINNER_SHOWDOWN':
-        return <span className="bg-cinema-gold/20 text-yellow-300 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border border-cinema-gold/30">🏆 Gewinner</span>;
+        return (
+          <span className="bg-cinema-gold/20 text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold tracking-wide border border-cinema-gold/30 inline-flex items-center gap-1.5 shadow-sm shadow-cinema-gold/10">
+            <Trophy className="w-3.5 h-3.5 text-cinema-gold" />
+            <span>Gewinner</span>
+          </span>
+        );
       default:
         return null;
     }
@@ -101,7 +106,9 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
                 <span className="max-w-[100px] truncate">{currentUser.username}</span>
                 {currentUser.totp_enabled && (
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" title="2FA aktiv" />
+                  <span title="2FA aktiv" className="inline-flex items-center">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  </span>
                 )}
               </>
             ) : (

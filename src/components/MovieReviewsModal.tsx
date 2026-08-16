@@ -118,7 +118,7 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
         rating,
         reviewText: hasSpoiler ? `[SPOILER]${reviewText}` : reviewText
       });
-      setFeedback({ type: 'success', text: res.message || 'Rezension veröffentlicht! 🎬' });
+      setFeedback({ type: 'success', text: res.message || 'Rezension erfolgreich veröffentlicht!' });
       await loadReviews();
     } catch (err: any) {
       setFeedback({ type: 'error', text: err.message || 'Fehler beim Speichern' });
@@ -194,8 +194,9 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-white">{movieTitle}</h2>
                 {averageRating !== null && (
-                  <span className="text-xs font-bold text-amber-400 px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20">
-                    ★ {averageRating}/10 · {reviews.length} {reviews.length === 1 ? 'Rezension' : 'Rezensionen'}
+                  <span className="text-xs font-bold text-amber-400 px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 inline-flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    <span>{averageRating}/10 · {reviews.length} {reviews.length === 1 ? 'Rezension' : 'Rezensionen'}</span>
                   </span>
                 )}
               </div>
@@ -375,8 +376,9 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-black flex items-center gap-0.5 ${chef ? 'text-cinema-gold neon-text-gold' : 'text-amber-400'}`}>
-                            ★ {rev.rating}
+                          <span className={`text-sm font-black flex items-center gap-1 ${chef ? 'text-cinema-gold neon-text-gold' : 'text-amber-400'}`}>
+                            <Star className={`w-3.5 h-3.5 ${chef ? 'fill-cinema-gold text-cinema-gold' : 'fill-amber-400 text-amber-400'}`} />
+                            <span>{rev.rating}</span>
                             <span className="text-xs font-normal text-slate-500">/10</span>
                           </span>
 

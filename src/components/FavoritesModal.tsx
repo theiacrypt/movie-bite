@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Heart, HeartOff, X, Star, Film, Search, FolderHeart,
-  Users, UserPlus, UserMinus, Bookmark, Trash2, ChevronDown, ArrowRight, Sparkles
+  Users, UserPlus, UserMinus, Bookmark, Trash2, ChevronDown, ArrowRight, Sparkles, Check
 } from 'lucide-react';
 import { suppenstudiosAuth, FavoriteMovie, FollowedUser } from '../services/suppenstudiosAuth.js';
 import { soundFx } from '../services/soundEffects.js';
@@ -285,7 +285,7 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({
                               <div className="flex items-center justify-between w-full">
                                 {alreadyAdded ? (
                                   <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-                                    ✓ Bereits im Pool
+                                    <Check className="w-3 h-3" /> Im Pool
                                   </span>
                                 ) : (
                                   <span className="text-[10px] text-cinema-red font-semibold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -400,7 +400,14 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-white line-clamp-1">{movie.title}</p>
-                            <p className="text-[10px] text-slate-400">{movie.year} · ★ {movie.rating}</p>
+                            <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                              <span>{movie.year}</span>
+                              <span>·</span>
+                              <span className="flex items-center gap-0.5 text-cinema-gold font-medium">
+                                <Star className="w-2.5 h-2.5 fill-cinema-gold" />
+                                {movie.rating}
+                              </span>
+                            </p>
                           </div>
                         </div>
                       ))}

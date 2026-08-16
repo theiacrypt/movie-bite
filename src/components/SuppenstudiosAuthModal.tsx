@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  Film
+  Film,
+  Star
 } from 'lucide-react';
 import { suppenstudiosAuth, User, Review } from '../services/suppenstudiosAuth.js';
 
@@ -513,8 +514,9 @@ export const SuppenstudiosAuthModal: React.FC<SuppenstudiosAuthModalProps> = ({ 
                     <div key={rev.id} className="p-3 rounded-xl bg-theater-950/80 border border-white/10 space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-white">{rev.movie_title}</span>
-                        <span className="text-xs font-bold text-amber-400 px-2 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/20">
-                          ★ {rev.rating}/10
+                        <span className="text-xs font-bold text-amber-400 px-2.5 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/20 inline-flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          <span>{rev.rating}/10</span>
                         </span>
                       </div>
                       {rev.review_text && (

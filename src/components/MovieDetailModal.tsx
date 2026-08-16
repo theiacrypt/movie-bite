@@ -73,8 +73,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({ movie, onClo
                   </span>
                 )}
                 {reviewsData && reviewsData.count > 0 && (
-                  <span className="flex items-center gap-1 text-amber-300 text-xs bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
-                    ★ {reviewsData.averageRating}/10 ({reviewsData.count} {reviewsData.count === 1 ? 'Rezension' : 'Rezensionen'})
+                  <span className="inline-flex items-center gap-1.5 text-amber-300 text-xs bg-amber-500/20 px-2.5 py-0.5 rounded-lg border border-amber-500/30">
+                    <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
+                    <span>{reviewsData.averageRating}/10 ({reviewsData.count} {reviewsData.count === 1 ? 'Rezension' : 'Rezensionen'})</span>
                   </span>
                 )}
               </div>

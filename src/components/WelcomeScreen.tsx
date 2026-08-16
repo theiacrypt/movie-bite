@@ -198,16 +198,25 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             </button>
           </form>
 
-          {/* Feature row */}
-          <div className="mt-6 pt-5 border-t border-white/5 grid grid-cols-3 gap-2 text-center text-[11px] text-slate-400">
-            <div className="flex flex-col items-center gap-1 hover:text-slate-300 transition-colors">
-              <span className="text-base">🎬</span><span>Live Movie API</span>
+          {/* Feature row - MD3 Assist Chips */}
+          <div className="mt-6 pt-5 border-t border-white/5 grid grid-cols-3 gap-2 text-center text-[11px]">
+            <div className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-theater-900/60 border border-white/5 text-slate-300 hover:text-white hover:border-white/10 transition-all">
+              <div className="p-1.5 rounded-lg bg-cinema-red/15 text-cinema-red">
+                <Film className="w-4 h-4" />
+              </div>
+              <span className="font-medium">Live Movie API</span>
             </div>
-            <div className="flex flex-col items-center gap-1 hover:text-slate-300 transition-colors">
-              <span className="text-base">⭐</span><span>Favoriten-Listen</span>
+            <div className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-theater-900/60 border border-white/5 text-slate-300 hover:text-white hover:border-white/10 transition-all">
+              <div className="p-1.5 rounded-lg bg-cinema-gold/15 text-cinema-gold">
+                <Star className="w-4 h-4" />
+              </div>
+              <span className="font-medium">Favoriten-Listen</span>
             </div>
-            <div className="flex flex-col items-center gap-1 hover:text-slate-300 transition-colors">
-              <span className="text-base">✍️</span><span>Rezensionen</span>
+            <div className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-theater-900/60 border border-white/5 text-slate-300 hover:text-white hover:border-white/10 transition-all">
+              <div className="p-1.5 rounded-lg bg-cinema-purple/15 text-cinema-purple">
+                <MessageSquare className="w-4 h-4" />
+              </div>
+              <span className="font-medium">Rezensionen</span>
             </div>
           </div>
         </div>

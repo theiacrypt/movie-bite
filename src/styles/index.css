@@ -294,6 +294,122 @@
 }
 .heart-pop { animation: heartPop 0.35s ease-out; }
 
+/* ─── Material Design 3 (MD3) Tokens & Components ── */
+
+:root {
+  --md-sys-color-surface: #0b0f19;
+  --md-sys-color-surface-dim: #07090e;
+  --md-sys-color-surface-bright: #161f33;
+  --md-sys-color-surface-container-lowest: #05070a;
+  --md-sys-color-surface-container-low: #0c1220;
+  --md-sys-color-surface-container: #111726;
+  --md-sys-color-surface-container-high: #172138;
+  --md-sys-color-surface-container-highest: #1e2b4a;
+  --md-sys-color-primary: #9C1018;
+  --md-sys-color-primary-container: rgba(156, 16, 24, 0.2);
+  --md-sys-color-on-primary-container: #ffdad6;
+  --md-sys-color-secondary-container: rgba(255, 255, 255, 0.08);
+  --md-sys-color-tertiary-container: rgba(0, 255, 65, 0.12);
+  --md-sys-color-outline: rgba(255, 255, 255, 0.12);
+  --md-sys-color-outline-variant: rgba(255, 255, 255, 0.06);
+  --md-sys-shape-corner-xs: 4px;
+  --md-sys-shape-corner-sm: 8px;
+  --md-sys-shape-corner-md: 12px;
+  --md-sys-shape-corner-lg: 16px;
+  --md-sys-shape-corner-xl: 28px;
+  --md-sys-shape-corner-full: 9999px;
+}
+
+/* MD3 Surface Containers */
+.md3-surface-container-low {
+  background-color: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.md3-surface-container {
+  background-color: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline);
+}
+
+.md3-surface-container-high {
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline);
+}
+
+/* MD3 Filter / Assist / Input Chips */
+.md3-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--md-sys-shape-corner-sm);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline);
+  color: #cbd5e1;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  user-select: none;
+}
+
+.md3-chip:hover {
+  background: var(--md-sys-color-surface-container-high);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.md3-chip.active, .md3-chip-selected {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-color: rgba(156, 16, 24, 0.6);
+  box-shadow: 0 2px 8px rgba(156, 16, 24, 0.25);
+}
+
+.md3-chip-tonal {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.md3-chip-tonal:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* MD3 Filled Tonal Button */
+.md3-btn-tonal {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.md3-btn-tonal:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* MD3 State Layer Ripple Simulation */
+.md3-state-layer {
+  position: relative;
+  overflow: hidden;
+}
+.md3-state-layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.md3-state-layer:hover::after {
+  opacity: 0.08;
+}
+.md3-state-layer:active::after {
+  opacity: 0.14;
+}
+
 /* ─── Misc ──────────────────────────────────────── */
 
 .line-clamp-1 { overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; }

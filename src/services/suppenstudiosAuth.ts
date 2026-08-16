@@ -71,15 +71,7 @@ const getApiBase = () => {
   return 'https://suppenstudios-auth.suppenchris.workers.dev';
 };
 
-/** Exportiert die Backend-URL für andere Services (z.B. Movie-Search) */
-export const getBackendBaseUrl = () => {
-  if (typeof window !== 'undefined') {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:8787';
-    }
-  }
-  return '';
-};
+export { getBackendBaseUrl } from './socket.js';
 
 export interface UserSearchResult {
   username: string;

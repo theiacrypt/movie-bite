@@ -258,7 +258,10 @@ export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
                     <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
                       <span>{item.movie.year}</span>
                       <span>•</span>
-                      <span>⭐ {item.movie.rating}</span>
+                      <span className="flex items-center gap-1 text-cinema-gold">
+                        <Star className="w-3 h-3 fill-cinema-gold" />
+                        <span>{item.movie.rating}</span>
+                      </span>
                     </p>
                   </div>
                 </div>

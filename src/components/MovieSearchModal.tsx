@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, X, Star, Plus, Film, Loader2, Music, SlidersHorizontal, Clock, ArrowUpDown, Sparkles, RotateCcw, Check } from 'lucide-react';
 import { SearchMovieResult } from '../types/game.js';
 import { soundFx } from '../services/soundEffects.js';
-import { getBackendBaseUrl } from '../services/socket.js';
+import { searchMoviesUniversal } from '../services/movieSearch.js';
 
 interface MovieSearchModalProps {
   isOpen: boolean;
@@ -72,36 +72,41 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    let cancelled = false;
     const fetchMovies = async () => {
       setLoading(true);
       setError(null);
       try {
-        const baseUrl = getBackendBaseUrl();
-        const params = new URLSearchParams();
-        if (query.trim()) params.set('q', query.trim());
-        if (selectedGenre !== 'Alle') params.set('genre', selectedGenre);
-        if (soundtrackOnly) params.set('soundtrack', 'true');
-        if (minRating > 0) params.set('minRating', minRating.toString());
-        if (runtimeFilter !== 'all') params.set('runtime', runtimeFilter);
-        if (sortBy !== 'popularity') params.set('sortBy', sortBy);
-
-        const res = await fetch(`${baseUrl}/api/search?${params.toString()}`);
-        const data = await res.json();
-        if (data.results) {
-          setResults(data.results);
+        const data = await searchMoviesUniversal({
+          query: query.trim(),
+          genre: selectedGenre,
+          soundtrack: soundtrackOnly,
+          minRating,
+          runtimeCategory: runtimeFilter,
+          sortBy
+        });
+        if (!cancelled) {
+          setResults(data || []);
         }
       } catch (err) {
-        setError('Konnte Filme nicht laden');
+        if (!cancelled) {
+          setError('Konnte Filme nicht laden');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     const timer = setTimeout(() => {
       fetchMovies();
-    }, query ? 300 : 0);
+    }, query ? 250 : 0);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query, selectedGenre, soundtrackOnly, minRating, runtimeFilter, sortBy, isOpen]);
 
   if (!isOpen) return null;
@@ -256,13 +261,14 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
                         soundFx.playPop();
                         setSoundtrackOnly(true);
                       }}
-                      className={`py-1 px-1 rounded-lg text-[11px] font-bold border transition-all text-center ${
+                      className={`py-1 px-1 rounded-lg text-[11px] font-bold border transition-all text-center flex items-center justify-center gap-1 ${
                         soundtrackOnly
                           ? 'bg-purple-600 text-white border-purple-400 font-black shadow-sm shadow-purple-500/30'
                           : 'bg-theater-900 text-slate-400 border-white/5 hover:text-white hover:bg-theater-850'
                       }`}
                     >
-                      🎵 Highlights
+                      <Music className="w-3 h-3" />
+                      <span>Highlights</span>
                     </button>
                   </div>
                 </div>
@@ -277,7 +283,7 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
                       { val: 0, label: 'Alle' },
                       { val: 7.0, label: '7.0+' },
                       { val: 8.0, label: '8.0+' },
-                      { val: 8.5, label: '8.5+ 🏆' }
+                      { val: 8.5, label: '8.5+' }
                     ].map((item) => (
                       <button
                         key={item.val}
@@ -340,10 +346,10 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
                     }}
                     className="w-full bg-theater-900 text-xs font-semibold text-white border border-white/10 rounded-lg p-1.5 focus:outline-none focus:border-cinema-red"
                   >
-                    <option value="popularity">🔥 Beliebteste</option>
-                    <option value="rating">⭐ Beste Bewertung</option>
-                    <option value="year">📅 Neueste zuerst</option>
-                    <option value="runtime">⏱️ Kürzeste zuerst</option>
+                    <option value="popularity">Beliebteste</option>
+                    <option value="rating">Beste Bewertung</option>
+                    <option value="year">Neueste zuerst</option>
+                    <option value="runtime">Kürzeste zuerst</option>
                   </select>
                 </div>
               </div>

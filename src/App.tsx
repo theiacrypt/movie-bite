@@ -144,10 +144,13 @@ export function App() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-4 px-6 text-center text-xs text-slate-400">
-        <p>
-          Movie-Bite • Entwickelt für{' '}
-          <strong className="text-slate-300">movie-bite.suppenstudios.work</strong> • Mit ❤️ & 🍿
+      <footer className="border-t border-white/5 py-5 px-6 text-center text-xs text-slate-400 bg-theater-950/60">
+        <p className="max-w-4xl mx-auto flex items-center justify-center gap-2 flex-wrap text-slate-400">
+          <span>Movie-Bite</span>
+          <span>•</span>
+          <span className="text-slate-300 font-medium">movie-bite.suppenstudios.work</span>
+          <span>•</span>
+          <span>Filmabende gemeinsam entscheiden</span>
         </p>
       </footer>
     </div>

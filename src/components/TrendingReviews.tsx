@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Flame, RefreshCw, Crown, Star, Heart, MessageSquare,
-  ThumbsUp, Film, Sparkles, Quote
+  ThumbsUp, Film, Sparkles, Quote, AlertTriangle
 } from 'lucide-react';
 import { suppenstudiosAuth, Review } from '../services/suppenstudiosAuth.js';
 
@@ -209,9 +209,10 @@ export const TrendingReviews: React.FC<TrendingReviewsProps> = ({ onOpenReview }
                   spoiler && !revealed ? (
                     <button
                       onClick={() => toggleSpoiler(review.id)}
-                      className="w-full text-[10px] text-amber-400 bg-amber-500/8 border border-amber-500/20 rounded-lg py-1.5 font-semibold hover:bg-amber-500/15 transition-colors"
+                      className="w-full text-[10px] text-amber-400 bg-amber-500/8 border border-amber-500/20 rounded-lg py-1.5 font-semibold hover:bg-amber-500/15 transition-colors flex items-center justify-center gap-1.5"
                     >
-                      ⚠️ Spoiler — Tippen zum Anzeigen
+                      <AlertTriangle className="w-3 h-3 text-amber-400" />
+                      <span>Spoiler — Tippen zum Anzeigen</span>
                     </button>
                   ) : (
                     <div>
