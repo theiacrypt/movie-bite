@@ -57,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cinema-red to-orange-500 flex items-center justify-center shadow-lg shadow-cinema-red/25">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cinema-red to-cinema-red-deep flex items-center justify-center shadow-lg shadow-cinema-red/25">
             <Film className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             {currentUser ? (
               <>
-                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-cinema-red to-orange-500 flex items-center justify-center text-[10px] text-white font-black">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-cinema-red to-cinema-red-deep flex items-center justify-center text-[10px] text-white font-black">
                   {currentUser.username.substring(0, 1).toUpperCase()}
                 </div>
                 <span className="max-w-[100px] truncate">{currentUser.username}</span>

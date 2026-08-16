@@ -17,12 +17,16 @@ export default {
           600: '#2d3b5c',
         },
         cinema: {
-          red: '#e50914',
-          'red-hover': '#cc0812',
+          red: '#9C1018',       // Kinosessel Rot — tiefes Kinorot (Samt-Sessel)
+          'red-hover': '#780C14',
+          'red-deep': '#580008',
+          green: '#00FF41',     // Matrix Grün — Phosphor-Neon
+          'green-dim': '#00C230',
+          'green-dark': '#003B18',
           gold: '#f5c518',
           'gold-dark': '#e5a100',
           purple: '#8b5cf6',
-          neon: '#06b6d4',
+          neon: '#00FF41',      // Matrix Grün (ersetzt Cyan)
           emerald: '#10b981',
         }
       },

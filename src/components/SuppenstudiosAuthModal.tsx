@@ -354,7 +354,7 @@ export const SuppenstudiosAuthModal: React.FC<SuppenstudiosAuthModalProps> = ({ 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cinema-red to-orange-600 hover:from-cinema-red-hover hover:to-orange-500 text-white font-semibold text-sm shadow-lg shadow-cinema-red/20 disabled:opacity-50 active:scale-[0.98] transition-all"
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cinema-red to-cinema-red-deep hover:from-cinema-red-hover hover:to-cinema-red text-white font-semibold text-sm shadow-lg shadow-cinema-red/20 disabled:opacity-50 active:scale-[0.98] transition-all"
                 >
                   {loading ? 'Anmelden...' : 'Anmelden'}
                 </button>
@@ -424,7 +424,7 @@ export const SuppenstudiosAuthModal: React.FC<SuppenstudiosAuthModalProps> = ({ 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cinema-red to-orange-600 hover:from-cinema-red-hover hover:to-orange-500 text-white font-semibold text-sm shadow-lg shadow-cinema-red/20 disabled:opacity-50 active:scale-[0.98] transition-all"
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cinema-red to-cinema-red-deep hover:from-cinema-red-hover hover:to-cinema-red text-white font-semibold text-sm shadow-lg shadow-cinema-red/20 disabled:opacity-50 active:scale-[0.98] transition-all"
                 >
                   {loading ? 'Konto wird erstellt...' : 'Account erstellen'}
                 </button>
@@ -531,7 +531,7 @@ export const SuppenstudiosAuthModal: React.FC<SuppenstudiosAuthModalProps> = ({ 
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-theater-950 border border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cinema-red to-orange-500 flex items-center justify-center text-white font-bold text-base shadow">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cinema-red to-cinema-red-deep flex items-center justify-center text-white font-bold text-base shadow">
                     {user?.username.substring(0, 2).toUpperCase()}
                   </div>
                   <div>

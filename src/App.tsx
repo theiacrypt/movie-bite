@@ -67,6 +67,10 @@ export function App() {
             initialRoomCode={initialRoomCode}
             error={error}
             loading={loading}
+            onOpenAuth={() => setIsAuthOpen(true)}
+            onOpenReview={(movieId, movieTitle, moviePoster) =>
+              setReviewMovie({ id: movieId, title: movieTitle, poster: moviePoster } as Movie)
+            }
           />
         ) : room.phase === 'LOBBY' ? (
           <LobbyView

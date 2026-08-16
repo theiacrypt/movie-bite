@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Film, Sparkles, ArrowRight, PlusCircle, Users, Heart, Star, Crown, MessageSquare } from 'lucide-react';
 import { AvatarPicker } from './AvatarPicker.js';
+import { DiscoverPanel } from './DiscoverPanel.js';
+import { TrendingReviews } from './TrendingReviews.js';
 import { soundFx } from '../services/soundEffects.js';
 import { suppenstudiosAuth, Review, User } from '../services/suppenstudiosAuth.js';
 
@@ -10,6 +12,8 @@ interface WelcomeScreenProps {
   initialRoomCode?: string;
   error?: string | null;
   loading?: boolean;
+  onOpenAuth?: () => void;
+  onOpenReview?: (movieId: string, movieTitle: string, moviePoster?: string) => void;
 }
 
 // Static film poster placeholders for background animation
@@ -20,7 +24,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onJoinRoom,
   initialRoomCode = '',
   error,
-  loading = false
+  loading = false,
+  onOpenAuth,
+  onOpenReview
 }) => {
   const [tab, setTab] = useState<'create' | 'join'>(initialRoomCode ? 'join' : 'create');
   const [name, setName] = useState('');
@@ -93,12 +99,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         <div className="w-full lg:max-w-md glass-panel rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl">
           {/* Hero */}
           <div className="text-center mb-6">
-            <div className="inline-flex p-3.5 rounded-2xl bg-gradient-to-br from-cinema-red to-orange-600 text-white shadow-xl shadow-cinema-red/30 mb-3 animate-float">
+            <div className="inline-flex p-3.5 rounded-2xl bg-gradient-to-br from-cinema-red to-cinema-red-deep text-white shadow-xl shadow-cinema-red/30 mb-3 animate-float">
               <Film className="w-8 h-8" />
             </div>
             <h2 className="font-display font-black text-2xl sm:text-3xl tracking-tight text-white">
               Gemeinsam Filme{' '}
-              <span className="bg-gradient-to-r from-cinema-red to-orange-400 bg-clip-text text-transparent neon-text-red">
+              <span className="bg-gradient-to-r from-cinema-red to-cinema-green bg-clip-text text-transparent neon-text-red">
                 entscheiden
               </span>
             </h2>
@@ -176,7 +182,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-cinema-red via-red-600 to-orange-600 hover:from-red-600 hover:to-orange-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-cinema-red/30 active:scale-98 transition-all disabled:opacity-50"
+              className="w-full mt-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-cinema-red to-cinema-red-deep hover:from-cinema-red-hover hover:to-cinema-red text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-cinema-red/30 active:scale-98 transition-all disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -214,7 +220,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <div className="glass-panel rounded-2xl p-4 border border-white/10 animate-slideUp">
               <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3 font-semibold">Dein Profil</p>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cinema-red to-orange-500 flex items-center justify-center text-white font-black text-base shadow-md shadow-cinema-red/20">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cinema-red to-cinema-red-deep flex items-center justify-center text-white font-black text-base shadow-md shadow-cinema-red/20">
                   {currentUser.username.substring(0, 1).toUpperCase()}
                 </div>
                 <div>
@@ -315,6 +321,17 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           )}
         </div>
       </div>
+
+      {/* ─── Discover Panel (Film & Nutzer-Suche) ─── */}
+      <DiscoverPanel
+        onOpenAuth={onOpenAuth}
+        onOpenReview={movie => onOpenReview?.(movie.id, movie.title, movie.poster)}
+      />
+
+      {/* ─── Trending Reviews ──────────────────────── */}
+      <TrendingReviews
+        onOpenReview={onOpenReview}
+      />
     </div>
   );
 };

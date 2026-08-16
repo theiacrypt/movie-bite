@@ -71,6 +71,22 @@ const getApiBase = () => {
   return 'https://suppenstudios-auth.suppenchris.workers.dev';
 };
 
+/** Exportiert die Backend-URL für andere Services (z.B. Movie-Search) */
+export const getBackendBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:8787';
+    }
+  }
+  return '';
+};
+
+export interface UserSearchResult {
+  username: string;
+  avatar_url?: string;
+  favoriteCount?: number;
+}
+
 class SuppenstudiosAuthService {
   private token: string | null = null;
   private currentUser: User | null = null;
@@ -271,6 +287,28 @@ class SuppenstudiosAuthService {
     }
   }
 
+  /** Lädt beliebte/trending Rezensionen (nach helpful_count gewichtet) */
+  public async getTopReviews(limit = 30): Promise<{ reviews: Review[] }> {
+    try {
+      return await this.request(`/api/reviews/top?limit=${limit}`, { method: 'GET' });
+    } catch {
+      // Fallback: eigene Reviews + Chef Reviews kombinieren
+      try {
+        const [mine, chef] = await Promise.allSettled([
+          this.getMyReviews(),
+          this.getUserReviews('Chef'),
+        ]);
+        const all: Review[] = [
+          ...(mine.status === 'fulfilled' ? mine.value.reviews : []),
+          ...(chef.status === 'fulfilled' ? chef.value.reviews : []),
+        ];
+        return { reviews: all };
+      } catch {
+        return { reviews: [] };
+      }
+    }
+  }
+
   // --- Favoriten (localStorage, userId-spezifisch) ---
 
   public getFavorites(): FavoriteMovie[] {
@@ -343,6 +381,20 @@ class SuppenstudiosAuthService {
 
   public isFollowing(username: string): boolean {
     return this.getFollowing().some(f => f.username === username);
+  }
+
+  /** Sucht Nutzer über die Auth-API */
+  public async searchUsers(query: string): Promise<UserSearchResult[]> {
+    if (!query.trim() || query.trim().length < 2) return [];
+    try {
+      const res = await this.request(`/api/users/search?q=${encodeURIComponent(query.trim())}`);
+      if (Array.isArray(res)) return res as UserSearchResult[];
+      if (res?.users) return res.users as UserSearchResult[];
+      return [];
+    } catch {
+      // API endpoint not available — return empty (graceful degradation)
+      return [];
+    }
   }
 
   /** Lädt Favoriten eines anderen Nutzers aus dessen localStorage-Export via API (Fallback: leer) */

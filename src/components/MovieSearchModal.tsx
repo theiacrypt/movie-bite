@@ -469,7 +469,7 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                         isAdded
                           ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-cinema-red to-orange-600 hover:from-red-600 hover:to-orange-500 text-white shadow-md shadow-cinema-red/20 active:scale-95'
+                          : 'bg-gradient-to-r from-cinema-red to-cinema-red-deep hover:from-cinema-red-hover hover:to-cinema-red text-white shadow-md shadow-cinema-red/20 active:scale-95'
                       }`}
                     >
                       {isAdded ? (

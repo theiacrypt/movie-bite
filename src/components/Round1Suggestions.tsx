@@ -110,7 +110,7 @@ export const Round1Suggestions: React.FC<Round1SuggestionsProps> = ({
             disabled={!canAddMore}
             className={`px-5 py-3.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xl active:scale-95 ${
               canAddMore
-                ? 'bg-gradient-to-r from-cinema-red to-orange-600 hover:from-red-600 hover:to-orange-500 text-white shadow-cinema-red/30'
+                ? 'bg-gradient-to-r from-cinema-red to-cinema-red-deep hover:from-cinema-red-hover hover:to-cinema-red text-white shadow-cinema-red/30'
                 : 'bg-theater-800 text-slate-500 border border-white/5 cursor-not-allowed'
             }`}
           >

@@ -283,7 +283,7 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="py-2 px-4 rounded-xl bg-gradient-to-r from-cinema-red to-orange-600 hover:from-red-600 hover:to-orange-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-cinema-red/20 disabled:opacity-50 transition-all active:scale-95"
+                    className="py-2 px-4 rounded-xl bg-gradient-to-r from-cinema-red to-cinema-red-deep hover:from-cinema-red-hover hover:to-cinema-red text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-cinema-red/20 disabled:opacity-50 transition-all active:scale-95"
                   >
                     <Send className="w-3.5 h-3.5" />
                     {submitting ? 'Wird gespeichert...' : 'Veröffentlichen'}

@@ -62,7 +62,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   onStartRound1();
                 }}
                 disabled={!canStart}
-                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cinema-red via-red-600 to-orange-600 hover:from-red-600 hover:to-orange-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-cinema-red/30 active:scale-95 transition-all disabled:opacity-50"
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cinema-red to-cinema-red-deep hover:from-cinema-red-hover hover:to-cinema-red text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-cinema-red/30 active:scale-95 transition-all disabled:opacity-50"
               >
                 <Play className="w-4 h-4 fill-white" />
                 <span>Runde 1 starten</span>
