@@ -85,15 +85,41 @@ class SuppenstudiosAuthService {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem(AUTH_STORAGE_KEY);
+      this.token = localStorage.getItem(AUTH_STORAGE_KEY) || this.getCookie('suppenstudios_session');
       const cached = localStorage.getItem(USER_STORAGE_KEY);
       if (cached) {
         try { this.currentUser = JSON.parse(cached); } catch (_) {}
       }
-      if (this.token) {
-        this.fetchProfile().catch(() => this.logout());
-      }
+      // Eagerly verify session / SSO cookie from Suppenstudios ecosystem
+      this.fetchProfile().catch(() => {
+        if (!cached) this.logout();
+      });
     }
+  }
+
+  private getCookie(name: string): string | null {
+    if (typeof document === 'undefined') return null;
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+  }
+
+  private setCookie(name: string, value: string, maxAge = 604800) {
+    if (typeof document === 'undefined') return;
+    let domainPart = '';
+    if (window.location.hostname.endsWith('suppenstudios.work')) {
+      domainPart = '; domain=.suppenstudios.work';
+    }
+    const isSecure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure}${domainPart}`;
+  }
+
+  private deleteCookie(name: string) {
+    if (typeof document === 'undefined') return;
+    let domainPart = '';
+    if (window.location.hostname.endsWith('suppenstudios.work')) {
+      domainPart = '; domain=.suppenstudios.work';
+    }
+    document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax${domainPart}`;
   }
 
   public subscribe(callback: (user: User | null) => void) {
@@ -124,7 +150,11 @@ class SuppenstudiosAuthService {
     };
     if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
 
-    const response = await fetch(`${baseUrl}${endpoint}`, { ...options, headers });
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      ...options,
+      headers,
+      credentials: 'include',
+    });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `Fehler (${response.status})`);
     return data;
@@ -211,17 +241,23 @@ class SuppenstudiosAuthService {
   // --- Profil & Session ---
 
   public async fetchProfile() {
-    if (!this.token) return null;
     try {
       const data = await this.request('/api/auth/me', { method: 'GET' });
-      if (data.user) {
+      if (data && data.user) {
+        if (data.token) {
+          this.token = data.token;
+          localStorage.setItem(AUTH_STORAGE_KEY, data.token);
+          this.setCookie('suppenstudios_session', data.token);
+        }
         this.currentUser = { ...data.user, has_passkey: (data.passkeys || []).length > 0 };
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.currentUser));
         this.notify();
+        return data;
       }
-      return data;
     } catch (err) {
-      this.logout();
+      if (this.token) {
+        this.logout();
+      }
       return null;
     }
   }
@@ -231,14 +267,19 @@ class SuppenstudiosAuthService {
     this.currentUser = user;
     localStorage.setItem(AUTH_STORAGE_KEY, token);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    this.setCookie('suppenstudios_session', token);
     this.notify();
   }
 
-  public logout() {
+  public async logout() {
+    try {
+      await this.request('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    } catch (_) {}
     this.token = null;
     this.currentUser = null;
     localStorage.removeItem(AUTH_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
+    this.deleteCookie('suppenstudios_session');
     this.notify();
   }
 
