@@ -11,6 +11,36 @@ export interface UnifiedSocket {
   disconnect(): this;
 }
 
+export function getBackendBaseUrl(): string {
+  const isDev = import.meta.env.DEV;
+
+  const customUrl =
+    (typeof window !== 'undefined' && (window as any).__MOVIE_BITE_BACKEND_URL__) ||
+    (typeof localStorage !== 'undefined' && localStorage.getItem('MOVIE_BITE_BACKEND_URL')) ||
+    (import.meta.env.VITE_BACKEND_URL as string);
+
+  if (customUrl) {
+    return customUrl.replace(/\/+$/, '');
+  }
+
+  if (isDev) {
+    return 'http://localhost:3001';
+  }
+
+  // If on Pages or custom domain, fallback to Cloudflare Worker backend
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.hostname.includes('pages.dev') ||
+      window.location.hostname.includes('suppenstudios.work') ||
+      window.location.hostname.includes('localhost') ||
+      window.location.hostname.includes('127.0.0.1'))
+  ) {
+    return 'https://movie-bite-worker.suppenchris.workers.dev';
+  }
+
+  return typeof window !== 'undefined' ? window.location.origin : '';
+}
+
 class CloudflareWorkerSocket implements UnifiedSocket {
   public connected = false;
   public id = `cf_${Math.random().toString(36).substring(2, 9)}`;
@@ -177,7 +207,6 @@ class CloudflareWorkerSocket implements UnifiedSocket {
     if (this.connected && this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(payload);
     } else {
-      // If not connected yet, connect and send once open
       this.connect();
       this.once('connect', () => {
         if (this.ws?.readyState === WebSocket.OPEN) {
@@ -208,25 +237,16 @@ let socketInstance: UnifiedSocket | null = null;
 export function getSocket(): UnifiedSocket {
   if (!socketInstance) {
     const isDev = import.meta.env.DEV;
-
-    const customUrl =
-      (typeof window !== 'undefined' && (window as any).__MOVIE_BITE_BACKEND_URL__) ||
-      (typeof localStorage !== 'undefined' && localStorage.getItem('MOVIE_BITE_BACKEND_URL')) ||
-      (import.meta.env.VITE_BACKEND_URL as string);
-
-    let serverUrl: string | undefined = customUrl;
-
-    if (!serverUrl && isDev) {
-      serverUrl = 'http://localhost:3001';
-    }
+    const serverUrl = getBackendBaseUrl();
 
     const isWorker =
-      (serverUrl && (serverUrl.includes('workers.dev') || serverUrl.includes('pages.dev') || serverUrl.includes('/ws'))) ||
-      (!isDev && !serverUrl); // In production on Cloudflare Pages / Workers, default to Worker WebSocket
+      serverUrl.includes('workers.dev') ||
+      serverUrl.includes('pages.dev') ||
+      serverUrl.includes('/ws') ||
+      (!isDev && serverUrl.startsWith('http'));
 
     if (isWorker) {
-      const baseUrl = serverUrl || (typeof window !== 'undefined' ? window.location.origin : '');
-      socketInstance = new CloudflareWorkerSocket(baseUrl);
+      socketInstance = new CloudflareWorkerSocket(serverUrl);
       socketInstance.connect();
     } else {
       // Standard Socket.IO Node.js connection

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, X, Star, Plus, Film, Loader2 } from 'lucide-react';
 import { SearchMovieResult } from '../types/game.js';
 import { soundFx } from '../services/soundEffects.js';
+import { getBackendBaseUrl } from '../services/socket.js';
 
 interface MovieSearchModalProps {
   isOpen: boolean;
@@ -28,7 +29,8 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const baseUrl = getBackendBaseUrl();
+        const res = await fetch(`${baseUrl}/api/search?q=${encodeURIComponent(query)}`);
         const data = await res.json();
         if (data.results) {
           setResults(data.results);
