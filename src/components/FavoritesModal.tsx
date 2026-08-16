@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Heart, HeartOff, X, Star, Film, Search, FolderHeart,
-  Users, UserPlus, UserMinus, Bookmark, Trash2, ChevronDown, ArrowRight, Sparkles, Check
+  Users, UserPlus, UserMinus, Bookmark, Trash2, ChevronDown, ArrowRight, Sparkles, Check,
+  Loader2, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { suppenstudiosAuth, FavoriteMovie, FollowedUser } from '../services/suppenstudiosAuth.js';
 import { soundFx } from '../services/soundEffects.js';
@@ -37,6 +38,9 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({
 
   // Social tab state
   const [followInput, setFollowInput] = useState('');
+  const [followLoading, setFollowLoading] = useState(false);
+  const [followError, setFollowError] = useState<string | null>(null);
+  const [followSuccess, setFollowSuccess] = useState<string | null>(null);
   const [selectedFollowed, setSelectedFollowed] = useState<string | null>(null);
   const [followedFavs, setFollowedFavs] = useState<FavoriteMovie[]>([]);
 
@@ -50,6 +54,8 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({
       reload();
       setSearch('');
       setFilterList('Alle');
+      setFollowError(null);
+      setFollowSuccess(null);
     }
   }, [isOpen, reload]);
 
@@ -80,12 +86,31 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({
       return a.title.localeCompare(b.title);
     });
 
-  const handleFollow = () => {
+  const handleFollow = async () => {
     const name = followInput.trim();
     if (!name || !currentUser) return;
-    suppenstudiosAuth.followUser(name, name);
-    setFollowInput('');
-    reload();
+    setFollowLoading(true);
+    setFollowError(null);
+    setFollowSuccess(null);
+
+    try {
+      const res = await suppenstudiosAuth.followUserVerified(name);
+      if (res.success && res.user) {
+        soundFx.playPop();
+        setFollowSuccess(`Du folgst jetzt „${res.user.username}“`);
+        setFollowInput('');
+        reload();
+        setTimeout(() => setFollowSuccess(null), 3500);
+      } else {
+        setFollowError(res.error || 'Nutzer nicht gefunden');
+        setTimeout(() => setFollowError(null), 4000);
+      }
+    } catch (err: any) {
+      setFollowError(err.message || 'Fehler beim Folgen');
+      setTimeout(() => setFollowError(null), 4000);
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   const handleUnfollow = (username: string) => {
@@ -319,31 +344,54 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({
             ) : (
               <div className="flex flex-1 overflow-hidden">
                 {/* Left: Following list */}
-                <div className="w-48 border-r border-white/8 flex flex-col shrink-0">
+                <div className="w-56 sm:w-64 border-r border-white/10 flex flex-col shrink-0 bg-theater-950/40">
                   {/* Follow input */}
-                  <div className="p-3 border-b border-white/8">
-                    <div className="flex gap-1.5">
+                  <div className="p-3 border-b border-white/10 space-y-2">
+                    <div className="flex items-center gap-2">
                       <input
                         type="text"
-                        placeholder="Username..."
+                        placeholder="Nutzername suchen..."
                         value={followInput}
-                        onChange={e => setFollowInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleFollow()}
-                        className="flex-1 px-2.5 py-1.5 text-xs bg-theater-800 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-cinema-neon/50 transition-colors"
+                        onChange={e => {
+                          setFollowInput(e.target.value);
+                          if (followError) setFollowError(null);
+                        }}
+                        onKeyDown={e => e.key === 'Enter' && !followLoading && handleFollow()}
+                        disabled={followLoading}
+                        className="flex-1 min-w-0 px-3 py-1.5 text-xs bg-theater-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cinema-neon/50 transition-colors disabled:opacity-50"
                       />
                       <button
                         onClick={handleFollow}
-                        className="p-1.5 rounded-lg bg-cinema-neon/20 text-cinema-neon hover:bg-cinema-neon/30 transition-colors"
-                        title="Folgen"
+                        disabled={followLoading || !followInput.trim()}
+                        className="shrink-0 p-2 rounded-xl bg-cinema-neon/15 hover:bg-cinema-neon/25 text-cinema-neon border border-cinema-neon/30 transition-all active:scale-95 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Nutzer prüfen & folgen"
                       >
-                        <UserPlus className="w-3.5 h-3.5" />
+                        {followLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-cinema-neon" />
+                        ) : (
+                          <UserPlus className="w-3.5 h-3.5" />
+                        )}
                       </button>
                     </div>
+
+                    {followError && (
+                      <div className="flex items-start gap-1.5 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] leading-tight animate-fadeIn">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>{followError}</span>
+                      </div>
+                    )}
+
+                    {followSuccess && (
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] leading-tight animate-fadeIn">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>{followSuccess}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Following list */}
                   <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider px-2 py-1">Gefolgte ({following.length})</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider px-2 py-1 font-semibold">Gefolgte ({following.length})</p>
                     {following.length === 0 ? (
                       <p className="text-[10px] text-slate-600 text-center py-4">Noch niemandem gefolgt</p>
                     ) : following.map(f => (

@@ -136,10 +136,6 @@ export const DiscoverPanel: React.FC<DiscoverPanelProps> = ({ onOpenAuth, onOpen
   const isLoading  = tab === 'movies' ? movieLoading : userLoading;
   const showEmpty  = debouncedQuery.trim() && !isLoading && !hasResults;
 
-  // "Exact follow" shortcut when no user API results
-  const canDirectFollow =
-    tab === 'users' && debouncedQuery.trim().length >= 2 && !userLoading && userResults.length === 0 && debouncedQuery.trim() !== '';
-
   return (
     <div className="w-full max-w-4xl mx-auto mt-6 space-y-4">
       {/* ─── Search Bar Capsule ─────────────────────── */}
@@ -370,38 +366,12 @@ export const DiscoverPanel: React.FC<DiscoverPanelProps> = ({ onOpenAuth, onOpen
         </div>
       )}
 
-      {/* ─── Direct follow shortcut (no API results) ── */}
-      {canDirectFollow && (
-        <div className="animate-slideUp flex items-center gap-4 p-4 rounded-2xl border border-cinema-green/20 bg-cinema-green/5">
-          <div className="w-10 h-10 rounded-full bg-cinema-green/15 border border-cinema-green/30 flex items-center justify-center text-cinema-green font-black text-sm shrink-0">
-            {debouncedQuery.trim().substring(0, 1).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white">{debouncedQuery.trim()}</p>
-            <p className="text-[10px] text-slate-400">Direkt diesem Username folgen</p>
-          </div>
-          <button
-            onClick={() => {
-              if (!currentUser) { onOpenAuth?.(); return; }
-              suppenstudiosAuth.followUser(debouncedQuery.trim(), debouncedQuery.trim());
-              setFollowChanged(n => n + 1);
-              soundFx.playPop();
-              setQuery('');
-            }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-cinema-green/15 border border-cinema-green/40 text-cinema-green hover:bg-cinema-green/25 transition-all active:scale-95"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Folgen
-          </button>
-        </div>
-      )}
-
       {/* ─── Empty state ────────────────────────────── */}
-      {showEmpty && !canDirectFollow && (
+      {showEmpty && (
         <div className="text-center py-8 space-y-2 animate-slideUp">
           {tab === 'movies'
-            ? <><Clapperboard className="w-10 h-10 mx-auto text-slate-700 mb-2" /><p className="text-sm text-slate-400">Keine Filme für „{debouncedQuery}" gefunden</p></>
-            : <><Users className="w-10 h-10 mx-auto text-slate-700 mb-2" /><p className="text-sm text-slate-400">Keine Nutzer für „{debouncedQuery}" gefunden</p></>
+            ? <><Clapperboard className="w-10 h-10 mx-auto text-slate-700 mb-2" /><p className="text-sm text-slate-400">Keine Filme für „{debouncedQuery}“ gefunden</p></>
+            : <><Users className="w-10 h-10 mx-auto text-slate-700 mb-2" /><p className="text-sm text-slate-400">Kein Suppenstudios-Nutzer namens „{debouncedQuery}“ gefunden</p><p className="text-xs text-slate-500">Es kann nur registrierten Accounts gefolgt werden.</p></>
           }
         </div>
       )}

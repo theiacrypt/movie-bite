@@ -64,9 +64,6 @@ const getApiBase = () => {
   if (typeof window !== 'undefined') {
     const custom = localStorage.getItem('suppenstudios_auth_api_url');
     if (custom) return custom;
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:8787';
-    }
   }
   return 'https://suppenstudios-auth.suppenchris.workers.dev';
 };
@@ -74,9 +71,11 @@ const getApiBase = () => {
 export { getBackendBaseUrl } from './socket.js';
 
 export interface UserSearchResult {
+  id?: string;
   username: string;
   avatar_url?: string;
   favoriteCount?: number;
+  review_count?: number;
 }
 
 class SuppenstudiosAuthService {
@@ -377,16 +376,55 @@ class SuppenstudiosAuthService {
 
   /** Sucht Nutzer über die Auth-API */
   public async searchUsers(query: string): Promise<UserSearchResult[]> {
-    if (!query.trim() || query.trim().length < 2) return [];
+    const clean = query.trim();
+    if (!clean) return [];
     try {
-      const res = await this.request(`/api/users/search?q=${encodeURIComponent(query.trim())}`);
+      const res = await this.request(`/api/users/search?q=${encodeURIComponent(clean)}`);
       if (Array.isArray(res)) return res as UserSearchResult[];
-      if (res?.users) return res.users as UserSearchResult[];
+      if (res?.users && Array.isArray(res.users)) return res.users as UserSearchResult[];
       return [];
-    } catch {
-      // API endpoint not available — return empty (graceful degradation)
+    } catch (err) {
+      console.warn('User search failed:', err);
       return [];
     }
+  }
+
+  /** Sucht einen Nutzer nach exaktem Benutzernamen */
+  public async findUserByExactName(username: string): Promise<UserSearchResult | null> {
+    const clean = username.trim();
+    if (!clean) return null;
+    const results = await this.searchUsers(clean);
+    return results.find(u => u.username.toLowerCase() === clean.toLowerCase()) || null;
+  }
+
+  /**
+   * Prüft ob der Nutzer existiert und folgt ihm nur, wenn er im System gefunden wird
+   */
+  public async followUserVerified(username: string): Promise<{ success: boolean; error?: string; user?: UserSearchResult }> {
+    if (!this.currentUser) {
+      return { success: false, error: 'Bitte melde dich zuerst an.' };
+    }
+    const clean = username.trim();
+    if (!clean) {
+      return { success: false, error: 'Bitte gib einen Nutzernamen ein.' };
+    }
+    if (this.currentUser.username.toLowerCase() === clean.toLowerCase()) {
+      return { success: false, error: 'Du kannst dir nicht selbst folgen.' };
+    }
+    if (this.isFollowing(clean)) {
+      return { success: false, error: `Du folgst „${clean}“ bereits.` };
+    }
+
+    const targetUser = await this.findUserByExactName(clean);
+    if (!targetUser) {
+      return { success: false, error: `Nutzer „${clean}“ existiert nicht bei Suppenstudios.` };
+    }
+
+    const list = this.getFollowing();
+    const targetId = targetUser.id || targetUser.username;
+    const updated: FollowedUser[] = [{ username: targetUser.username, userId: targetId, followedAt: Date.now() }, ...list];
+    localStorage.setItem(getFollowingKey(this.currentUser.id), JSON.stringify(updated));
+    return { success: true, user: targetUser };
   }
 
   /** Lädt Favoriten eines anderen Nutzers aus dessen localStorage-Export via API (Fallback: leer) */
