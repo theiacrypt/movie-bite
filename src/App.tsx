@@ -6,10 +6,15 @@ import { Round1Suggestions } from './components/Round1Suggestions.js';
 import { Round2Voting } from './components/Round2Voting.js';
 import { WinnerShowdown } from './components/WinnerShowdown.js';
 import { ShareModal } from './components/ShareModal.js';
+import { SuppenstudiosAuthModal } from './components/SuppenstudiosAuthModal.js';
+import { MovieReviewsModal } from './components/MovieReviewsModal.js';
+import { Movie } from './types/game.js';
 import { useRoom } from './hooks/useRoom.js';
 
 export function App() {
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [reviewMovie, setReviewMovie] = useState<Movie | null>(null);
   const [initialRoomCode, setInitialRoomCode] = useState('');
 
   const {
@@ -45,6 +50,7 @@ export function App() {
         phase={room?.phase}
         playerCount={room?.players.length}
         onOpenShare={() => setIsShareOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
       />
 
       <main className="flex-1 pb-12">
@@ -93,6 +99,27 @@ export function App() {
           roomCode={room.code}
           isOpen={isShareOpen}
           onClose={() => setIsShareOpen(false)}
+        />
+      )}
+
+      {/* Suppenstudios Zentraler Account Modal */}
+      <SuppenstudiosAuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+      />
+
+      {/* Filmrezensionen Modal */}
+      {reviewMovie && (
+        <MovieReviewsModal
+          isOpen={!!reviewMovie}
+          movieId={reviewMovie.id}
+          movieTitle={reviewMovie.title}
+          moviePoster={reviewMovie.poster}
+          onClose={() => setReviewMovie(null)}
+          onOpenAuth={() => {
+            setReviewMovie(null);
+            setIsAuthOpen(true);
+          }}
         />
       )}
 

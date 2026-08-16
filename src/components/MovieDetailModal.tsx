@@ -1,13 +1,25 @@
-import React from 'react';
-import { X, Star, Calendar, Clock, Film, ExternalLink, Play } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Star, Calendar, Clock, Film, ExternalLink, Play, MessageSquare, Sparkles } from 'lucide-react';
 import { Movie } from '../types/game.js';
+import { suppenstudiosAuth, ReviewsResponse } from '../services/suppenstudiosAuth.js';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
   onClose: () => void;
+  onOpenReviews?: (movie: Movie) => void;
 }
 
-export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({ movie, onClose }) => {
+export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({ movie, onClose, onOpenReviews }) => {
+  const [reviewsData, setReviewsData] = useState<ReviewsResponse | null>(null);
+
+  useEffect(() => {
+    if (movie) {
+      suppenstudiosAuth.getMovieReviews(movie.id)
+        .then(setReviewsData)
+        .catch(() => setReviewsData(null));
+    }
+  }, [movie]);
+
   if (!movie) return null;
 
   const trailerSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' ' + movie.year + ' trailer deutsch')}`;
@@ -60,6 +72,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({ movie, onClo
                     {movie.runtime}
                   </span>
                 )}
+                {reviewsData && reviewsData.count > 0 && (
+                  <span className="flex items-center gap-1 text-amber-300 text-xs bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
+                    ★ {reviewsData.averageRating}/10 ({reviewsData.count} {reviewsData.count === 1 ? 'Rezension' : 'Rezensionen'})
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -82,6 +99,27 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({ movie, onClo
             <p className="text-sm text-slate-200 leading-relaxed bg-theater-900/50 p-3 rounded-xl border border-white/5">
               {movie.plot}
             </p>
+          </div>
+
+          {/* Rezensionen Button */}
+          <div className="p-3 rounded-xl bg-gradient-to-r from-theater-900 to-theater-850 border border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <MessageSquare className="w-4 h-4 text-cinema-red" />
+              <div>
+                <div className="text-xs font-bold text-white">Suppenstudios Rezensionen</div>
+                <div className="text-[11px] text-slate-400">
+                  {reviewsData?.count ? `${reviewsData.count} Rezensionen vorhanden` : 'Schreibe die erste Rezension!'}
+                </div>
+              </div>
+            </div>
+            {onOpenReviews && (
+              <button
+                onClick={() => onOpenReviews(movie)}
+                className="px-3 py-1.5 rounded-lg bg-cinema-red hover:bg-cinema-red-hover text-white text-xs font-bold shadow-sm transition-all"
+              >
+                Rezensionen ({reviewsData?.count || 0})
+              </button>
+            )}
           </div>
 
           {movie.suggestedBy && (

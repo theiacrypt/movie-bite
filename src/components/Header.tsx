@@ -1,19 +1,29 @@
-import React from 'react';
-import { Film, Share2, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Film, Share2, Users, User, ShieldCheck } from 'lucide-react';
+import { suppenstudiosAuth, User as AuthUser } from '../services/suppenstudiosAuth.js';
 
 interface HeaderProps {
   roomCode?: string;
   phase?: string;
   playerCount?: number;
   onOpenShare?: () => void;
+  onOpenAuth?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   roomCode,
   phase,
   playerCount,
-  onOpenShare
+  onOpenShare,
+  onOpenAuth
 }) => {
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(suppenstudiosAuth.getUser());
+
+  useEffect(() => {
+    const unsub = suppenstudiosAuth.subscribe(setCurrentUser);
+    return unsub;
+  }, []);
+
   const getPhaseBadge = () => {
     switch (phase) {
       case 'LOBBY':
@@ -50,6 +60,30 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Actions & Room Code */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Suppenstudios Account Button */}
+          <button
+            onClick={onOpenAuth}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-theater-900 hover:bg-theater-850 border border-white/10 text-xs font-semibold text-slate-200 transition-all active:scale-95 shadow-sm"
+          >
+            {currentUser ? (
+              <>
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-cinema-red to-orange-500 flex items-center justify-center text-[10px] text-white font-bold">
+                  {currentUser.username.substring(0, 1).toUpperCase()}
+                </div>
+                <span className="max-w-[100px] truncate">{currentUser.username}</span>
+                {currentUser.totp_enabled && (
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" title="2FA aktiv" />
+                )}
+              </>
+            ) : (
+              <>
+                <User className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden xs:inline">Suppenstudios Account</span>
+                <span className="xs:hidden">Login</span>
+              </>
+            )}
+          </button>
+
           {roomCode && (
             <>
               {playerCount !== undefined && (
