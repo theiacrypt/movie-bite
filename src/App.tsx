@@ -7,10 +7,8 @@ import { Round2Voting } from './components/Round2Voting.js';
 import { WinnerShowdown } from './components/WinnerShowdown.js';
 import { ShareModal } from './components/ShareModal.js';
 import { useRoom } from './hooks/useRoom.js';
-import { soundFx } from './services/soundEffects.js';
 
 export function App() {
-  const [soundEnabled, setSoundEnabled] = useState(true);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [initialRoomCode, setInitialRoomCode] = useState('');
 
@@ -40,22 +38,12 @@ export function App() {
     }
   }, []);
 
-  const handleToggleSound = () => {
-    setSoundEnabled(prev => {
-      const next = !prev;
-      soundFx.enabled = next;
-      return next;
-    });
-  };
-
   return (
     <div className="min-h-screen bg-theater-950 text-slate-100 flex flex-col font-sans">
       <Header
         roomCode={room?.code}
         phase={room?.phase}
         playerCount={room?.players.length}
-        soundEnabled={soundEnabled}
-        onToggleSound={handleToggleSound}
         onOpenShare={() => setIsShareOpen(true)}
       />
 

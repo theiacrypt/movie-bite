@@ -1,13 +1,10 @@
 import React from 'react';
-import { Film, Volume2, VolumeX, Share2, Users } from 'lucide-react';
-import { soundFx } from '../services/soundEffects.js';
+import { Film, Share2, Users } from 'lucide-react';
 
 interface HeaderProps {
   roomCode?: string;
   phase?: string;
   playerCount?: number;
-  soundEnabled: boolean;
-  onToggleSound: () => void;
   onOpenShare?: () => void;
 }
 
@@ -15,8 +12,6 @@ export const Header: React.FC<HeaderProps> = ({
   roomCode,
   phase,
   playerCount,
-  soundEnabled,
-  onToggleSound,
   onOpenShare
 }) => {
   const getPhaseBadge = () => {
@@ -73,17 +68,6 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </>
           )}
-
-          <button
-            onClick={() => {
-              onToggleSound();
-              soundFx.playPop();
-            }}
-            title={soundEnabled ? 'Ton stummschalten' : 'Ton aktivieren'}
-            className="p-2 rounded-lg bg-theater-900 border border-white/5 hover:bg-theater-800 text-slate-400 hover:text-white transition-colors"
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4 text-cinema-gold" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
-          </button>
         </div>
       </div>
     </header>
