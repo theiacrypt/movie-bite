@@ -13,9 +13,17 @@ import {
   Eye,
   EyeOff,
   ThumbsUp,
-  AlertTriangle
+  AlertTriangle,
+  Music,
+  Zap,
+  Smile,
+  Check,
+  Brain,
+  Palette,
+  Compass
 } from 'lucide-react';
 import { suppenstudiosAuth, Review, User } from '../services/suppenstudiosAuth.js';
+import { tasteProfileService, REVIEW_CATEGORIES, ReviewCategoryOption } from '../services/tasteProfile.js';
 
 interface MovieReviewsModalProps {
   movieId: string | number;
@@ -35,6 +43,7 @@ function isChef(username?: string): boolean {
 interface ReviewWithLocal extends Review {
   _helpfulLocal?: boolean;
   _helpfulCount?: number;
+  _parsedTags?: string[];
 }
 
 export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
@@ -55,8 +64,10 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
   const [rating, setRating] = useState<number>(8);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [reviewText, setReviewText] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showDetailedCategories, setShowDetailedCategories] = useState(true);
   const [hasSpoiler, setHasSpoiler] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; text: string; influenceText?: string } | null>(null);
 
   // Spoiler reveal tracking
   const [revealedSpoilers, setRevealedSpoilers] = useState<Set<string>>(new Set());
@@ -72,19 +83,46 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
     try {
       const res = await suppenstudiosAuth.getMovieReviews(movieId);
       // Sort: Chef always first, then by date
-      const sorted = (res.reviews || []).sort((a, b) => {
+      const sorted = (res.reviews || []).map(r => {
+        let text = r.review_text || '';
+        let tags: string[] = [];
+        const match = text.match(/\[TAGS:\s*([^\]]+)\]/);
+        if (match) {
+          tags = match[1].split(',').map(t => t.trim());
+          text = text.replace(/\[TAGS:\s*[^\]]+\]/, '').trim();
+        }
+        return {
+          ...r,
+          review_text: text,
+          _parsedTags: tags
+        };
+      }).sort((a, b) => {
         if (isChef(a.username) && !isChef(b.username)) return -1;
         if (!isChef(a.username) && isChef(b.username)) return 1;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
+
       setReviews(sorted);
       setAverageRating(res.averageRating);
 
-      if (currentUser) {
+      // Record that user has seen/read these reviews for influence tracking
+      sorted.forEach(rev => {
+        tasteProfileService.recordReviewRead(rev, movieId);
+      });
+
+      // Populate my existing review if any
+      const enrichedList = tasteProfileService.getEnrichedReviews();
+      const myLocal = enrichedList.find(e => String(e.movieId) === String(movieId));
+      if (myLocal) {
+        setRating(myLocal.rating);
+        setSelectedTags(myLocal.selectedTags || []);
+        setReviewText(myLocal.reviewText || '');
+      } else if (currentUser) {
         const myRev = sorted.find(r => r.user_id === currentUser.id);
         if (myRev) {
           setRating(myRev.rating);
           setReviewText(myRev.review_text || '');
+          if (myRev._parsedTags?.length) setSelectedTags(myRev._parsedTags);
         }
       }
     } catch (err) {
@@ -102,6 +140,12 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
     }
   }, [isOpen, movieId, currentUser?.id]);
 
+  const toggleTag = (tagId: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
+    );
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,14 +155,21 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
     setSubmitting(true);
     setFeedback(null);
     try {
-      const res = await suppenstudiosAuth.submitMovieReview({
+      const result = await tasteProfileService.saveEnrichedReview({
         movieId,
         movieTitle,
         moviePoster,
         rating,
-        reviewText: hasSpoiler ? `[SPOILER]${reviewText}` : reviewText
+        reviewText,
+        selectedTags,
+        hasSpoiler
       });
-      setFeedback({ type: 'success', text: res.message || 'Rezension erfolgreich veröffentlicht!' });
+
+      setFeedback({
+        type: 'success',
+        text: result.message,
+        influenceText: result.influenceText
+      });
       await loadReviews();
     } catch (err: any) {
       setFeedback({ type: 'error', text: err.message || 'Fehler beim Speichern' });
@@ -213,61 +264,251 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
 
           {/* Feedback Banner */}
           {feedback && (
-            <div className={`p-3 rounded-xl flex items-center gap-2 text-xs animate-slideUp ${
+            <div className={`p-3.5 rounded-xl flex items-center gap-2 text-xs animate-slideUp ${
               feedback.type === 'success'
                 ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
                 : 'bg-red-500/15 border border-red-500/30 text-red-300'
             }`}>
               {feedback.type === 'success'
-                ? <CheckCircle2 className="w-4 h-4 shrink-0" />
-                : <AlertCircle className="w-4 h-4 shrink-0" />
+                ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                : <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
               }
               <span>{feedback.text}</span>
             </div>
           )}
 
           {/* ─── Write Review Form ─────────────────── */}
-          <div className="p-4 rounded-2xl bg-theater-950/70 border border-white/10 space-y-3">
+          <div className="p-4 sm:p-5 rounded-2xl bg-theater-950/80 border border-white/10 space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-cinema-red" />
-                {currentUser ? 'Deine Rezension' : 'Mit Suppenstudios-Account bewerten'}
+                {currentUser ? 'Deine detaillierte Rezension' : 'Mit Suppenstudios-Account bewerten'}
               </span>
               {currentUser && (
-                <span className="text-xs font-semibold text-amber-400">
-                  {hoverRating ?? rating} / 10
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/20 font-mono">
+                  {hoverRating ?? rating} / 10 Punkte
                 </span>
               )}
             </div>
 
             {currentUser ? (
-              <form onSubmit={handleSubmit} className="space-y-3">
-                {/* Stars */}
-                <div className="flex items-center gap-1 flex-wrap py-1">
-                  {[1,2,3,4,5,6,7,8,9,10].map(star => (
-                    <button
-                      key={star}
-                      type="button"
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(null)}
-                      onClick={() => setRating(star)}
-                      className="p-0.5 transition-transform hover:scale-125"
-                    >
-                      <Star className={`w-5 h-5 transition-colors ${starColor(star, hoverRating ?? rating)}`} />
-                    </button>
-                  ))}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* 1-10 Stars Rating */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1.5">
+                    Gesamtbewertung
+                  </label>
+                  <div className="flex items-center gap-1.5 flex-wrap p-2 rounded-xl bg-theater-900/90 border border-white/5">
+                    {[1,2,3,4,5,6,7,8,9,10].map(star => (
+                      <button
+                        key={star}
+                        type="button"
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(null)}
+                        onClick={() => setRating(star)}
+                        className="p-1 transition-transform hover:scale-125 focus:outline-none"
+                      >
+                        <Star className={`w-5 h-5 transition-colors ${starColor(star, hoverRating ?? rating)}`} />
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
+                {/* ─── Granular Categories Selector ─── */}
+                <div className="space-y-3 p-3.5 rounded-xl bg-theater-900/60 border border-white/8">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-cinema-purple" />
+                      Detaillierte Kriterien
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowDetailedCategories(p => !p)}
+                      className="text-[10px] text-cinema-neon hover:underline font-semibold"
+                    >
+                      {showDetailedCategories ? 'Einklappen' : 'Kategorien wählen'}
+                    </button>
+                  </div>
+
+                  {showDetailedCategories && (
+                    <div className="space-y-3.5 pt-2">
+                      {/* Musik & Sound */}
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                          <Music className="w-3 h-3 text-amber-400" /> {REVIEW_CATEGORIES.music.title}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {REVIEW_CATEGORIES.music.options.map(opt => {
+                            const active = selectedTags.includes(opt.id);
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => toggleTag(opt.id)}
+                                className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all active:scale-95 flex items-center gap-1 ${
+                                  active
+                                    ? 'bg-amber-400/20 border-amber-400 text-amber-300 shadow-sm'
+                                    : 'bg-theater-850 border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'
+                                }`}
+                              >
+                                {active && <Check className="w-3 h-3" />}
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Pacing & Dynamik */}
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                          <Zap className="w-3 h-3 text-cyan-400" /> {REVIEW_CATEGORIES.pacing.title}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {REVIEW_CATEGORIES.pacing.options.map(opt => {
+                            const active = selectedTags.includes(opt.id);
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => toggleTag(opt.id)}
+                                className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all active:scale-95 flex items-center gap-1 ${
+                                  active
+                                    ? 'bg-cyan-400/20 border-cyan-400 text-cyan-300 shadow-sm'
+                                    : 'bg-theater-850 border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'
+                                }`}
+                              >
+                                {active && <Check className="w-3 h-3" />}
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Story & Plot */}
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                          <Brain className="w-3 h-3 text-purple-400" /> {REVIEW_CATEGORIES.story.title}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {REVIEW_CATEGORIES.story.options.map(opt => {
+                            const active = selectedTags.includes(opt.id);
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => toggleTag(opt.id)}
+                                className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all active:scale-95 flex items-center gap-1 ${
+                                  active
+                                    ? 'bg-purple-400/20 border-purple-400 text-purple-300 shadow-sm'
+                                    : 'bg-theater-850 border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'
+                                }`}
+                              >
+                                {active && <Check className="w-3 h-3" />}
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Schauspiel & Cast */}
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                          <Smile className="w-3 h-3 text-emerald-400" /> {REVIEW_CATEGORIES.acting.title}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {REVIEW_CATEGORIES.acting.options.map(opt => {
+                            const active = selectedTags.includes(opt.id);
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => toggleTag(opt.id)}
+                                className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all active:scale-95 flex items-center gap-1 ${
+                                  active
+                                    ? 'bg-emerald-400/20 border-emerald-400 text-emerald-300 shadow-sm'
+                                    : 'bg-theater-850 border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'
+                                }`}
+                              >
+                                {active && <Check className="w-3 h-3" />}
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Visuals, Emotion & Empfehlung */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                            <Palette className="w-3 h-3 text-pink-400" /> {REVIEW_CATEGORIES.visuals.title}
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {REVIEW_CATEGORIES.visuals.options.map(opt => {
+                              const active = selectedTags.includes(opt.id);
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => toggleTag(opt.id)}
+                                  className={`text-[10px] font-medium px-2 py-0.5 rounded-lg border transition-all active:scale-95 flex items-center gap-1 ${
+                                    active
+                                      ? 'bg-pink-400/20 border-pink-400 text-pink-300 shadow-sm'
+                                      : 'bg-theater-850 border-white/10 text-slate-400 hover:text-slate-200'
+                                  }`}
+                                >
+                                  {active && <Check className="w-2.5 h-2.5" />}
+                                  {opt.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                            <Compass className="w-3 h-3 text-indigo-400" /> {REVIEW_CATEGORIES.recommendation.title}
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {REVIEW_CATEGORIES.recommendation.options.map(opt => {
+                              const active = selectedTags.includes(opt.id);
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => toggleTag(opt.id)}
+                                  className={`text-[10px] font-medium px-2 py-0.5 rounded-lg border transition-all active:scale-95 flex items-center gap-1 ${
+                                    active
+                                      ? 'bg-indigo-400/20 border-indigo-400 text-indigo-300 shadow-sm'
+                                      : 'bg-theater-850 border-white/10 text-slate-400 hover:text-slate-200'
+                                  }`}
+                                >
+                                  {active && <Check className="w-2.5 h-2.5" />}
+                                  {opt.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Review Textarea */}
                 <textarea
                   rows={3}
-                  placeholder="Deine Meinung zum Film? Was hat dich begeistert oder enttäuscht?"
+                  placeholder="Deine Rezension: Was hat dich begeistert oder gestört? Wie war die Stimmung?"
                   value={reviewText}
                   onChange={e => setReviewText(e.target.value)}
                   className="w-full p-3 text-xs text-white bg-theater-900 border border-white/15 rounded-xl focus:outline-none focus:border-cinema-red resize-none transition-colors"
                 />
 
                 {/* Options row */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between pt-1">
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <div
                       onClick={() => setHasSpoiler(p => !p)}
@@ -275,7 +516,7 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
                     >
                       <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-all ${hasSpoiler ? 'left-4' : 'left-0.5'}`} />
                     </div>
-                    <span className="text-[10px] text-slate-400 group-hover:text-slate-300 flex items-center gap-1">
+                    <span className="text-[10px] text-slate-400 group-hover:text-slate-300 flex items-center gap-1 font-medium">
                       <AlertTriangle className="w-3 h-3 text-amber-500" />
                       Enthält Spoiler
                     </span>
@@ -284,17 +525,17 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="py-2 px-4 rounded-xl bg-gradient-to-r from-cinema-red to-cinema-red-deep hover:from-cinema-red-hover hover:to-cinema-red text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-cinema-red/20 disabled:opacity-50 transition-all active:scale-95"
+                    className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-cinema-red to-cinema-red-deep hover:from-cinema-red-hover hover:to-cinema-red text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-cinema-red/20 disabled:opacity-50 transition-all active:scale-95"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    {submitting ? 'Wird gespeichert...' : 'Veröffentlichen'}
+                    {submitting ? 'Wird analysiert & gespeichert...' : 'Rezension veröffentlichen'}
                   </button>
                 </div>
               </form>
             ) : (
               <div className="text-center py-4 space-y-2">
                 <p className="text-xs text-slate-400">
-                  Melde dich an, um Filmrezensionen zu schreiben und mit der Community zu teilen.
+                  Melde dich an, um Filmrezensionen zu schreiben und dein persönliches Geschmacksprofil zu schärfen.
                 </p>
                 <button
                   type="button"
@@ -420,6 +661,27 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
                               )}
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {/* Tags Pill Badges */}
+                      {rev._parsedTags && rev._parsedTags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {rev._parsedTags.map(tagId => {
+                            let label = tagId;
+                            for (const cat of Object.values(REVIEW_CATEGORIES)) {
+                              const opt = cat.options.find(o => o.id === tagId);
+                              if (opt) { label = opt.label; break; }
+                            }
+                            return (
+                              <span
+                                key={tagId}
+                                className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-theater-900 border border-white/10 text-slate-300"
+                              >
+                                {label}
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
 

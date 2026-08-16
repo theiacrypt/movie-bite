@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Film, Sparkles, ArrowRight, PlusCircle, Users, Heart, Star, Crown, MessageSquare } from 'lucide-react';
+import {
+  Film, Sparkles, ArrowRight, PlusCircle, Users, Heart, Star, Crown, MessageSquare,
+  Brain, Music, Zap, CheckCircle2, Play
+} from 'lucide-react';
 import { AvatarPicker } from './AvatarPicker.js';
 import { DiscoverPanel } from './DiscoverPanel.js';
 import { TrendingReviews } from './TrendingReviews.js';
 import { soundFx } from '../services/soundEffects.js';
 import { suppenstudiosAuth, Review, User } from '../services/suppenstudiosAuth.js';
+import { tasteProfileService, WatchedMovieItem, UserTasteProfile } from '../services/tasteProfile.js';
 
 interface WelcomeScreenProps {
   onCreateRoom: (name: string, avatar: string) => void;
@@ -35,17 +39,31 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   const [currentUser, setCurrentUser] = useState<User | null>(suppenstudiosAuth.getUser());
   const [chefReviews, setChefReviews] = useState<Review[]>([]);
   const [myFavCount, setMyFavCount] = useState(0);
+  const [unreviewedWatched, setUnreviewedWatched] = useState<WatchedMovieItem[]>([]);
+  const [tasteProfile, setTasteProfile] = useState<UserTasteProfile>(tasteProfileService.getTasteProfile());
 
   useEffect(() => {
     if (initialRoomCode) { setRoomCode(initialRoomCode); setTab('join'); }
   }, [initialRoomCode]);
 
   useEffect(() => {
-    const unsub = suppenstudiosAuth.subscribe(user => {
+    const unsubAuth = suppenstudiosAuth.subscribe(user => {
       setCurrentUser(user);
       setMyFavCount(suppenstudiosAuth.getFavorites().length);
     });
-    return unsub;
+
+    const updateTaste = () => {
+      setUnreviewedWatched(tasteProfileService.getUnreviewedWatchedMovies());
+      setTasteProfile(tasteProfileService.getTasteProfile());
+    };
+
+    updateTaste();
+    const unsubTaste = tasteProfileService.subscribe(updateTaste);
+
+    return () => {
+      unsubAuth();
+      unsubTaste();
+    };
   }, []);
 
   useEffect(() => {
@@ -226,9 +244,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
           {/* Quick Stats (when logged in) */}
           {currentUser && (
-            <div className="glass-panel rounded-2xl p-4 border border-white/10 animate-slideUp">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3 font-semibold">Dein Profil</p>
-              <div className="flex items-center gap-3 mb-3">
+            <div className="glass-panel rounded-2xl p-4 border border-white/10 animate-slideUp space-y-3">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Dein Profil</p>
+
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cinema-red to-cinema-red-deep flex items-center justify-center text-white font-black text-base shadow-md shadow-cinema-red/20">
                   {currentUser.username.substring(0, 1).toUpperCase()}
                 </div>
@@ -237,6 +256,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                   <p className="text-[10px] text-slate-400">Suppenstudios Account</p>
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="p-2 rounded-xl bg-theater-800/60 border border-white/5">
                   <div className="flex items-center justify-center gap-1 text-cinema-red font-black text-base">
@@ -278,7 +298,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                   return (
                     <div
                       key={review.id}
-                      className="p-3 rounded-xl bg-theater-800/60 border border-cinema-gold/15 space-y-1.5 hover:border-cinema-gold/30 transition-colors"
+                      className="p-3 rounded-xl bg-theater-800/60 border border-cinema-gold/15 space-y-1.5 hover:border-cinema-gold/30 transition-colors cursor-pointer"
+                      onClick={() => onOpenReview?.(review.movie_id, review.movie_title, review.movie_poster)}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-xs font-bold text-white line-clamp-1 leading-tight">
@@ -291,12 +312,17 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                       </div>
                       {text && (
                         <p className="text-[10px] text-slate-400 leading-relaxed line-clamp-2">
-                          „{text}"
+                          „{text}“
                         </p>
                       )}
-                      <div className="flex items-center gap-1 text-[9px] text-slate-600">
-                        <MessageSquare className="w-2.5 h-2.5" />
-                        {new Date(review.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })}
+                      <div className="flex items-center justify-between text-[9px] text-slate-600 pt-1">
+                        <span className="flex items-center gap-1">
+                          <MessageSquare className="w-2.5 h-2.5" />
+                          {new Date(review.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })}
+                        </span>
+                        <span className="text-cinema-gold font-bold hover:underline">
+                          Rezension öffnen →
+                        </span>
                       </div>
                     </div>
                   );
@@ -330,6 +356,64 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           )}
         </div>
       </div>
+
+      {/* ─── Ausstehende Film-Bewertungen ("Wie fandest du diesen Film?") ─── */}
+      {unreviewedWatched.length > 0 && (
+        <div className="w-full max-w-4xl mx-auto p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-cinema-purple/20 via-theater-900 to-theater-950 border border-cinema-purple/30 shadow-2xl space-y-3 animate-slideUp">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-cinema-purple/20 text-cinema-purple border border-cinema-purple/30">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-white">
+                  Wie fandest du diesen Film?
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Zuletzt gemeinsam geschaut. Bewerte ihn jetzt, um dein internes Geschmacksprofil zu schärfen!
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cinema-purple/20 text-cinema-purple border border-cinema-purple/30 hidden sm:inline-block">
+              {unreviewedWatched.length} {unreviewedWatched.length === 1 ? 'Ausstehend' : 'Ausstehend'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {unreviewedWatched.slice(0, 2).map(item => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 p-3 rounded-2xl bg-theater-950/80 border border-white/10 hover:border-cinema-purple/50 transition-all group"
+              >
+                <div className="w-12 h-16 rounded-xl overflow-hidden bg-theater-900 shrink-0 poster-scanlines shadow">
+                  {item.poster ? (
+                    <img src={item.poster} alt={item.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Film className="w-5 h-5 text-slate-600" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-cinema-purple transition-colors">
+                    {item.title}
+                  </h4>
+                  <p className="text-[10px] text-slate-400">
+                    {item.roomCode ? `Aus Raum ${item.roomCode}` : 'Filmabend-Gewinner'}
+                  </p>
+                  <button
+                    onClick={() => onOpenReview?.(item.id, item.title, item.poster)}
+                    className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-cinema-purple hover:bg-purple-600 text-white text-[11px] font-bold transition-all shadow-md shadow-cinema-purple/20 active:scale-95"
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    Jetzt bewerten
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ─── Discover Panel (Film & Nutzer-Suche) ─── */}
       <DiscoverPanel

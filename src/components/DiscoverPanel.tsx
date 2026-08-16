@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search, Film, Users, Heart, UserPlus, UserMinus, Star,
-  X, Loader2, Clapperboard, Sparkles, Crown, TrendingUp
+  X, Loader2, Clapperboard, Sparkles, Crown, TrendingUp,
+  BookOpen, MessageSquare
 } from 'lucide-react';
 import { suppenstudiosAuth, UserSearchResult, FavoriteMovie, User } from '../services/suppenstudiosAuth.js';
 import { searchMoviesUniversal } from '../services/movieSearch.js';
+import { tasteProfileService } from '../services/tasteProfile.js';
 import { soundFx } from '../services/soundEffects.js';
 
 interface MovieResult {
@@ -227,66 +229,88 @@ export const DiscoverPanel: React.FC<DiscoverPanelProps> = ({ onOpenAuth, onOpen
               <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-1">
                 {movieResults.length} Ergebnisse für „{debouncedQuery}"
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 {movieResults.map(movie => {
                   const isFav = suppenstudiosAuth.isFavorite(movie.id);
+                  const match = tasteProfileService.calculateMovieMatch(movie as any);
                   return (
                     <div
                       key={movie.id}
-                      className="group relative rounded-2xl overflow-hidden bg-theater-900 border border-white/8 hover:border-cinema-red/40 transition-all cursor-pointer"
+                      onClick={() => onOpenReview?.(movie)}
+                      className="group relative rounded-2xl overflow-hidden bg-theater-900/90 border border-white/10 hover:border-cinema-red/50 hover:bg-theater-850 transition-all cursor-pointer flex flex-col p-3 shadow-lg"
                     >
-                      {/* Poster */}
-                      <div className="relative aspect-[2/3] overflow-hidden poster-scanlines">
-                        {movie.poster ? (
-                          <img
-                            src={movie.poster.startsWith('http') ? movie.poster : `https://image.tmdb.org/t/p/w342${movie.poster}`}
-                            alt={movie.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            onClick={() => onOpenReview?.(movie)}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-theater-800 flex items-center justify-center">
-                            <Film className="w-8 h-8 text-slate-600" />
-                          </div>
-                        )}
-                        {/* Overlay gradient */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-theater-950 via-transparent to-transparent" />
+                      <div className="flex gap-3">
+                        {/* Poster */}
+                        <div className="relative w-20 sm:w-24 aspect-[2/3] shrink-0 rounded-xl overflow-hidden poster-scanlines shadow-md bg-theater-950">
+                          {movie.poster ? (
+                            <img
+                              src={movie.poster.startsWith('http') ? movie.poster : `https://image.tmdb.org/t/p/w342${movie.poster}`}
+                              alt={movie.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-theater-800 flex items-center justify-center">
+                              <Film className="w-6 h-6 text-slate-600" />
+                            </div>
+                          )}
 
-                        {/* Rating badge */}
-                        <div className="absolute top-2 left-2 bg-theater-950/85 backdrop-blur-sm px-1.5 py-0.5 rounded-lg text-[10px] font-bold text-cinema-gold flex items-center gap-0.5 border border-cinema-gold/20">
-                          <Star className="w-2.5 h-2.5 fill-cinema-gold" />
-                          {movie.rating}
+                          {/* Rating badge */}
+                          <div className="absolute top-1.5 left-1.5 bg-theater-950/90 backdrop-blur-sm px-1.5 py-0.5 rounded-md text-[10px] font-bold text-cinema-gold flex items-center gap-0.5 border border-cinema-gold/30">
+                            <Star className="w-2.5 h-2.5 fill-cinema-gold" />
+                            {movie.rating}
+                          </div>
                         </div>
 
-                        {/* Favorite button */}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleToggleFav(movie); }}
-                          className={`absolute bottom-2 right-2 p-1.5 rounded-full backdrop-blur-sm border transition-all ${
-                            isFav
-                              ? 'bg-cinema-red text-white border-cinema-red shadow-md shadow-cinema-red/30'
-                              : 'bg-theater-950/70 border-white/20 text-slate-400 hover:text-cinema-red hover:border-cinema-red/50 opacity-0 group-hover:opacity-100'
-                          }`}
-                          title={isFav ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
-                        >
-                          <Heart className={`w-3 h-3 ${isFav ? 'fill-white' : ''}`} />
-                        </button>
+                        {/* Details */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-start justify-between gap-1">
+                              <h4 className="text-xs sm:text-sm font-bold text-white line-clamp-1 group-hover:text-cinema-red transition-colors">
+                                {movie.title}
+                              </h4>
+                              {/* Favorite button */}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleToggleFav(movie); }}
+                                className={`p-1.5 rounded-full border transition-all shrink-0 ${
+                                  isFav
+                                    ? 'bg-cinema-red text-white border-cinema-red shadow-sm'
+                                    : 'bg-theater-950/80 border-white/15 text-slate-400 hover:text-cinema-red hover:border-cinema-red/50'
+                                }`}
+                                title={isFav ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+                              >
+                                <Heart className={`w-3 h-3 ${isFav ? 'fill-white' : ''}`} />
+                              </button>
+                            </div>
 
-                        {/* Chef crown */}
-                        {movie.title === 'Chef' && (
-                          <div className="absolute top-2 right-2">
-                            <Crown className="w-3.5 h-3.5 text-cinema-gold fill-cinema-gold" />
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5 flex-wrap">
+                              <span>{movie.year}</span>
+                              {movie.genre?.[0] && <span>· {movie.genre.slice(0, 2).join(', ')}</span>}
+                            </div>
+
+                            {/* Description snippet */}
+                            <p className="text-[11px] text-slate-300/80 line-clamp-2 mt-1.5 leading-relaxed">
+                              {movie.plot || 'Keine Beschreibung verfügbar.'}
+                            </p>
                           </div>
-                        )}
-                      </div>
 
-                      {/* Card info */}
-                      <div className="p-2.5">
-                        <p className="text-xs font-bold text-white line-clamp-1 leading-tight">
-                          {movie.title}
-                        </p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
-                          {movie.year} {movie.genre?.[0] && `· ${movie.genre[0]}`}
-                        </p>
+                          {/* Action Button */}
+                          <div className="pt-2 flex items-center justify-between border-t border-white/5 mt-1">
+                            <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                              <BookOpen className="w-3 h-3" />
+                              Details & Handlung
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenReview?.(movie);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cinema-red/15 hover:bg-cinema-red/25 border border-cinema-red/30 text-cinema-red text-[10px] font-bold transition-all"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              Rezension
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );

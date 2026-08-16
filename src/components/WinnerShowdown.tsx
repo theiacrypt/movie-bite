@@ -5,6 +5,7 @@ import { RoomState, MovieScore, Movie } from '../types/game.js';
 import { MovieDetailModal } from './MovieDetailModal.js';
 import { soundFx } from '../services/soundEffects.js';
 import { suppenstudiosAuth } from '../services/suppenstudiosAuth.js';
+import { tasteProfileService } from '../services/tasteProfile.js';
 
 interface WinnerShowdownProps {
   room: RoomState;
@@ -27,6 +28,10 @@ export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
 
   useEffect(() => {
     soundFx.playFanfare();
+
+    if (winner?.movie) {
+      tasteProfileService.recordWatchedMovie(winner.movie, room.code);
+    }
 
     // Trigger celebratory confetti cannon
     const duration = 3.5 * 1000;
