@@ -141,63 +141,78 @@ export const DiscoverPanel: React.FC<DiscoverPanelProps> = ({ onOpenAuth, onOpen
 
   return (
     <div className="w-full max-w-4xl mx-auto mt-6 space-y-4">
-      {/* ─── Search Bar ─────────────────────────────── */}
-      <div className="relative">
-        {/* Tab pills inside the bar */}
-        <div className="flex gap-1.5 absolute left-3 top-1/2 -translate-y-1/2 z-10">
+      {/* ─── Search Bar Capsule ─────────────────────── */}
+      <div className="glass-panel p-2 rounded-2xl sm:rounded-3xl border border-white/10 shadow-2xl space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-2.5 focus-within:border-cinema-red/50 focus-within:ring-2 focus-within:ring-cinema-red/15 transition-all">
+        {/* Tab pills */}
+        <div className="flex p-1 bg-theater-950/80 rounded-xl sm:rounded-2xl border border-white/5 shrink-0">
           <button
-            onClick={() => { setTab('movies'); inputRef.current?.focus(); }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+            type="button"
+            onClick={() => { setTab('movies'); soundFx.playPop(); inputRef.current?.focus(); }}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all ${
               tab === 'movies'
-                ? 'bg-cinema-red text-white shadow-sm shadow-cinema-red/30'
-                : 'bg-theater-800 text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-cinema-red to-cinema-red-deep text-white shadow-md shadow-cinema-red/30'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Film className="w-3 h-3" />
-            Filme
+            <Film className="w-3.5 h-3.5" />
+            <span>Filme</span>
           </button>
           <button
-            onClick={() => { setTab('users'); inputRef.current?.focus(); }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+            type="button"
+            onClick={() => { setTab('users'); soundFx.playPop(); inputRef.current?.focus(); }}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all ${
               tab === 'users'
-                ? 'bg-cinema-green/20 text-cinema-green border border-cinema-green/40 shadow-sm'
-                : 'bg-theater-800 text-slate-400 hover:text-white'
+                ? 'bg-cinema-green/20 text-cinema-green border border-cinema-green/30 shadow-md shadow-cinema-green/10'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Users className="w-3 h-3" />
-            Nutzer
+            <Users className="w-3.5 h-3.5" />
+            <span>Nutzer</span>
           </button>
         </div>
 
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder={tab === 'movies' ? 'Film suchen — Titel, Genre, Jahr...' : 'Nutzer suchen — Username eingeben...'}
-          className="w-full pl-36 pr-12 py-3.5 rounded-2xl bg-theater-900/80 backdrop-blur-sm border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cinema-red/50 transition-all shadow-xl"
-        />
+        {/* Desktop Divider */}
+        <div className="hidden sm:block w-px h-6 bg-white/10 shrink-0" />
 
-        {/* Right icon */}
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-          {isLoading
-            ? <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
-            : query
-              ? <button onClick={() => setQuery('')} className="text-slate-500 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
-              : <Search className="w-4 h-4 text-slate-600" />
-          }
+        {/* Input Field */}
+        <div className="relative flex-1 flex items-center">
+          <Search className="w-4 h-4 absolute left-3 text-slate-400 pointer-events-none" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder={tab === 'movies' ? 'Film suchen — Titel, Genre, Regie...' : 'Nutzer suchen — Username eingeben...'}
+            className="w-full bg-theater-950/50 sm:bg-transparent border sm:border-0 border-white/5 rounded-xl sm:rounded-none pl-9 pr-9 py-2.5 sm:py-2 text-sm text-white placeholder-slate-500 focus:outline-none"
+          />
+
+          {/* Right Icon / Clear / Spinner */}
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center">
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 text-cinema-red animate-spin" />
+            ) : query ? (
+              <button
+                type="button"
+                onClick={() => { setQuery(''); soundFx.playPop(); inputRef.current?.focus(); }}
+                className="p-1 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                title="Löschen"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
       {/* ─── Quick Searches (movie tab, no query) ───── */}
       {tab === 'movies' && !query && (
         <div className="flex items-center gap-2 flex-wrap px-1">
-          <span className="text-[10px] text-slate-500 uppercase tracking-wider">Quick:</span>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Quick:</span>
           {QUICK_SEARCHES.map(term => (
             <button
               key={term}
-              onClick={() => setQuery(term)}
-              className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-theater-800/80 border border-white/8 text-slate-300 hover:border-cinema-red/40 hover:text-white transition-all"
+              onClick={() => { setQuery(term); soundFx.playPop(); }}
+              className="text-[11px] font-semibold px-3 py-1 rounded-full bg-theater-900/80 border border-white/10 text-slate-300 hover:border-cinema-red/40 hover:text-white hover:bg-theater-800 transition-all active:scale-95 shadow-sm"
             >
               {term}
             </button>
