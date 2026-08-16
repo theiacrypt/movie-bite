@@ -1,5 +1,6 @@
 import { Review, suppenstudiosAuth } from './suppenstudiosAuth.js';
 import { SearchMovieResult, Movie } from '../types/game.js';
+import { unlockSideQuestAchievement } from './sidequestTriggers.js';
 
 export interface ReviewCategoryOption {
   id: string;
@@ -310,6 +311,20 @@ class TasteProfileService {
     } catch (err) {
       console.warn("Could not sync review to Suppenstudios API:", err);
     }
+
+    // 🏆 Trigger SideQuest Ecosystem Achievements
+    try {
+      unlockSideQuestAchievement('couch_kritiker');
+      if (params.rating <= 1 && (params.reviewText || '').length >= 60) {
+        unlockSideQuestAchievement('hate_watcher');
+      }
+      if (reviews.length >= 20) {
+        unlockSideQuestAchievement('cineast_meisterklasse');
+      }
+      if (this.getWatchedMovies().length >= 10) {
+        unlockSideQuestAchievement('popcorn_gourmet');
+      }
+    } catch (_) {}
 
     this.notify();
     return {
