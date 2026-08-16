@@ -1,0 +1,12 @@
+{
+  "id": "movie-bite",
+  "title": "Movie-Bite",
+  "description": "Die cineastische Echtzeit-App für deinen nächsten Filmabend. Movie-Bite ist natürlich eine Anspielung auf Movie Night – aber bei Suppenstudios musste einfach ein kulinarischer Wortwitz her! Gemeinsam Filme vorschlagen, per Like & Super-Vote abstimmen und das perfekte Heimkino-Menü servieren. 🍿🎬",
+  "image": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+  "tags": [
+    "React",
+    "Socket.IO",
+    "Filmabend",
+    "Lecker"
+  ]
+}

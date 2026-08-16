@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Film, Share2, Users, User, ShieldCheck } from 'lucide-react';
+import { Film, Share2, Users, User, ShieldCheck, Heart } from 'lucide-react';
 import { suppenstudiosAuth, User as AuthUser } from '../services/suppenstudiosAuth.js';
 
 interface HeaderProps {
@@ -8,6 +8,7 @@ interface HeaderProps {
   playerCount?: number;
   onOpenShare?: () => void;
   onOpenAuth?: () => void;
+  onOpenFavorites?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,12 +16,24 @@ export const Header: React.FC<HeaderProps> = ({
   phase,
   playerCount,
   onOpenShare,
-  onOpenAuth
+  onOpenAuth,
+  onOpenFavorites
 }) => {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(suppenstudiosAuth.getUser());
+  const [favCount, setFavCount] = useState(suppenstudiosAuth.getFavorites().length);
 
   useEffect(() => {
-    const unsub = suppenstudiosAuth.subscribe(setCurrentUser);
+    const unsub = suppenstudiosAuth.subscribe(u => {
+      setCurrentUser(u);
+      setFavCount(suppenstudiosAuth.getFavorites().length);
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const unsub = suppenstudiosAuth.subscribeFavorites(() => {
+      setFavCount(suppenstudiosAuth.getFavorites().length);
+    });
     return unsub;
   }, []);
 
@@ -40,11 +53,11 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="w-full border-b border-white/10 bg-theater-950/90 sticky top-0 z-40 px-4 py-3 sm:px-6">
+    <header className="w-full border-b border-white/10 bg-theater-950/90 backdrop-blur-md sticky top-0 z-40 px-4 py-3 sm:px-6">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cinema-red to-orange-500 flex items-center justify-center shadow-lg shadow-cinema-red/20">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cinema-red to-orange-500 flex items-center justify-center shadow-lg shadow-cinema-red/25">
             <Film className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -54,20 +67,36 @@ export const Header: React.FC<HeaderProps> = ({
               </h1>
               {getPhaseBadge()}
             </div>
-            <p className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">movie-bite.suppenstudios.work</p>
+            <p className="text-[10px] text-slate-500 font-medium tracking-wide uppercase">movie-bite.suppenstudios.work</p>
           </div>
         </div>
 
-        {/* Actions & Room Code */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Suppenstudios Account Button */}
+        {/* Right actions */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+
+          {/* Favorites button */}
+          <button
+            onClick={onOpenFavorites}
+            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-theater-900 hover:bg-theater-850 border border-white/10 hover:border-cinema-red/30 text-xs font-semibold text-slate-200 transition-all active:scale-95 shadow-sm"
+            title="Favoriten"
+          >
+            <Heart className={`w-3.5 h-3.5 ${favCount > 0 ? 'text-cinema-red fill-cinema-red' : 'text-slate-400'}`} />
+            <span className="hidden sm:inline">Favoriten</span>
+            {favCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-cinema-red text-white text-[9px] font-black flex items-center justify-center shadow-md">
+                {favCount > 9 ? '9+' : favCount}
+              </span>
+            )}
+          </button>
+
+          {/* Auth button */}
           <button
             onClick={onOpenAuth}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-theater-900 hover:bg-theater-850 border border-white/10 text-xs font-semibold text-slate-200 transition-all active:scale-95 shadow-sm"
           >
             {currentUser ? (
               <>
-                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-cinema-red to-orange-500 flex items-center justify-center text-[10px] text-white font-bold">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-cinema-red to-orange-500 flex items-center justify-center text-[10px] text-white font-black">
                   {currentUser.username.substring(0, 1).toUpperCase()}
                 </div>
                 <span className="max-w-[100px] truncate">{currentUser.username}</span>
@@ -78,12 +107,13 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <>
                 <User className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden xs:inline">Suppenstudios Account</span>
+                <span className="hidden xs:inline">Suppenstudios</span>
                 <span className="xs:hidden">Login</span>
               </>
             )}
           </button>
 
+          {/* Share / Room code */}
           {roomCode && (
             <>
               {playerCount !== undefined && (
@@ -92,7 +122,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>{playerCount} {playerCount === 1 ? 'Spieler' : 'Spieler'}</span>
                 </div>
               )}
-
               <button
                 onClick={onOpenShare}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-theater-850 hover:bg-theater-800 border border-cinema-red/30 hover:border-cinema-red/60 text-xs font-semibold text-cinema-red transition-all shadow-sm active:scale-95"

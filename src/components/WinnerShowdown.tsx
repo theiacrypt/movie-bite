@@ -1,21 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Trophy, Crown, Star, Heart, ThumbsDown, RotateCcw, Play, Film, ExternalLink, Sparkles, Medal } from 'lucide-react';
-import { RoomState, MovieScore } from '../types/game.js';
+import { Trophy, Crown, Star, Heart, ThumbsDown, RotateCcw, Play, Film, ExternalLink, Sparkles, Medal, MessageSquare } from 'lucide-react';
+import { RoomState, MovieScore, Movie } from '../types/game.js';
 import { MovieDetailModal } from './MovieDetailModal.js';
 import { soundFx } from '../services/soundEffects.js';
+import { suppenstudiosAuth } from '../services/suppenstudiosAuth.js';
 
 interface WinnerShowdownProps {
   room: RoomState;
   currentPlayerId: string;
   onRestartGame: () => void;
+  onOpenReview?: (movie: Movie) => void;
 }
 
 export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
   room,
   currentPlayerId,
-  onRestartGame
+  onRestartGame,
+  onOpenReview
 }) => {
+  const [winnerFaved, setWinnerFaved] = useState(false);
   const isHost = room.hostId === currentPlayerId;
   const winner = room.winner;
   const results = room.results || [];
@@ -160,29 +164,65 @@ export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
               </div>
             </div>
 
-            {/* Actions: YouTube & JustWatch */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <a
-                href={trailerSearchUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 py-3 px-4 rounded-xl bg-cinema-red hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cinema-red/25 transition-all"
-              >
-                <Play className="w-4 h-4 fill-white" />
-                <span>Trailer anschauen</span>
-                <ExternalLink className="w-3.5 h-3.5 ml-auto" />
-              </a>
+            {/* Actions: Review / Favorite / YouTube / JustWatch */}
+            <div className="space-y-2 pt-2">
+              {/* Primary actions */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                {onOpenReview && (
+                  <button
+                    onClick={() => onOpenReview(winner.movie as unknown as Movie)}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-cinema-purple to-violet-600 hover:from-purple-600 hover:to-violet-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cinema-purple/25 transition-all active:scale-95"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Rezension schreiben</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    const m = winner.movie as any;
+                    if (suppenstudiosAuth.isFavorite(m.id)) {
+                      suppenstudiosAuth.removeFavorite(m.id);
+                      setWinnerFaved(false);
+                    } else {
+                      suppenstudiosAuth.addFavorite({ id: m.id, title: m.title, year: m.year, poster: m.poster, plot: m.plot, genre: m.genre, rating: m.rating });
+                      setWinnerFaved(true);
+                    }
+                    soundFx.playPop();
+                  }}
+                  className={`py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all active:scale-95 ${
+                    winnerFaved || suppenstudiosAuth.isFavorite((winner.movie as any).id)
+                      ? 'bg-cinema-red/20 border-cinema-red/40 text-cinema-red'
+                      : 'bg-theater-850 border-white/15 text-slate-300 hover:border-cinema-red/30 hover:text-cinema-red'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${(winnerFaved || suppenstudiosAuth.isFavorite((winner.movie as any).id)) ? 'fill-cinema-red' : ''}`} />
+                  <span>{(winnerFaved || suppenstudiosAuth.isFavorite((winner.movie as any).id)) ? 'In Favoriten' : 'Zu Favoriten'}</span>
+                </button>
+              </div>
 
-              <a
-                href={justWatchUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 py-3 px-4 rounded-xl bg-cinema-gold/15 hover:bg-cinema-gold/25 text-cinema-gold font-bold text-xs flex items-center justify-center gap-2 border border-cinema-gold/30 transition-all"
-              >
-                <Film className="w-4 h-4" />
-                <span>Wo streamen?</span>
-                <ExternalLink className="w-3.5 h-3.5 ml-auto" />
-              </a>
+              {/* Secondary actions */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <a
+                  href={trailerSearchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-cinema-red hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cinema-red/20 transition-all"
+                >
+                  <Play className="w-4 h-4 fill-white" />
+                  <span>Trailer</span>
+                  <ExternalLink className="w-3 h-3 ml-auto" />
+                </a>
+                <a
+                  href={justWatchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-cinema-gold/15 hover:bg-cinema-gold/25 text-cinema-gold font-bold text-xs flex items-center justify-center gap-2 border border-cinema-gold/30 transition-all"
+                >
+                  <Film className="w-4 h-4" />
+                  <span>Wo streamen?</span>
+                  <ExternalLink className="w-3 h-3 ml-auto" />
+                </a>
+              </div>
             </div>
           </div>
         </div>

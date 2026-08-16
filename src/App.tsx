@@ -8,12 +8,14 @@ import { WinnerShowdown } from './components/WinnerShowdown.js';
 import { ShareModal } from './components/ShareModal.js';
 import { SuppenstudiosAuthModal } from './components/SuppenstudiosAuthModal.js';
 import { MovieReviewsModal } from './components/MovieReviewsModal.js';
+import { FavoritesModal } from './components/FavoritesModal.js';
 import { Movie } from './types/game.js';
 import { useRoom } from './hooks/useRoom.js';
 
 export function App() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
   const [reviewMovie, setReviewMovie] = useState<Movie | null>(null);
   const [initialRoomCode, setInitialRoomCode] = useState('');
 
@@ -32,7 +34,6 @@ export function App() {
     restartGame
   } = useRoom();
 
-  // Read URL query parameter "?room=XXXXXX"
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
@@ -43,6 +44,10 @@ export function App() {
     }
   }, []);
 
+  const openReview = (movie: Movie) => {
+    setReviewMovie(movie);
+  };
+
   return (
     <div className="min-h-screen bg-theater-950 text-slate-100 flex flex-col font-sans">
       <Header
@@ -51,6 +56,7 @@ export function App() {
         playerCount={room?.players.length}
         onOpenShare={() => setIsShareOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenFavorites={() => setIsFavoritesOpen(true)}
       />
 
       <main className="flex-1 pb-12">
@@ -77,6 +83,7 @@ export function App() {
             onAddMovie={addMovie}
             onRemoveMovie={removeMovie}
             onStartVoting={() => startPhase('ROUND_2_VOTE')}
+            onOpenReview={openReview}
           />
         ) : room.phase === 'ROUND_2_VOTE' ? (
           <Round2Voting
@@ -90,10 +97,12 @@ export function App() {
             room={room}
             currentPlayerId={playerId}
             onRestartGame={restartGame}
+            onOpenReview={openReview}
           />
         )}
       </main>
 
+      {/* Share Modal */}
       {room && (
         <ShareModal
           roomCode={room.code}
@@ -102,13 +111,20 @@ export function App() {
         />
       )}
 
-      {/* Suppenstudios Zentraler Account Modal */}
+      {/* Suppenstudios Account Modal */}
       <SuppenstudiosAuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
       />
 
-      {/* Filmrezensionen Modal */}
+      {/* Favoriten Modal (global) */}
+      <FavoritesModal
+        isOpen={isFavoritesOpen}
+        onClose={() => setIsFavoritesOpen(false)}
+        onOpenAuth={() => { setIsFavoritesOpen(false); setIsAuthOpen(true); }}
+      />
+
+      {/* Film-Rezensionen Modal */}
       {reviewMovie && (
         <MovieReviewsModal
           isOpen={!!reviewMovie}
@@ -126,7 +142,8 @@ export function App() {
       {/* Footer */}
       <footer className="border-t border-white/5 py-4 px-6 text-center text-xs text-slate-400">
         <p>
-          Movie-Bite • Entwickelt für <strong className="text-slate-300">movie-bite.suppenstudios.work</strong> • Mit ❤️ & 🍿
+          Movie-Bite • Entwickelt für{' '}
+          <strong className="text-slate-300">movie-bite.suppenstudios.work</strong> • Mit ❤️ & 🍿
         </p>
       </footer>
     </div>

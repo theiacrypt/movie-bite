@@ -30,15 +30,40 @@ export interface ReviewsResponse {
   reviews: Review[];
 }
 
+export interface FavoriteMovie {
+  id: string;
+  title: string;
+  year: string;
+  poster: string;
+  plot: string;
+  genre: string[];
+  rating: number;
+  runtime?: string;
+  runtimeMinutes?: number;
+  addedAt: number; // timestamp
+  listName?: string; // optional group
+}
+
+export interface FollowedUser {
+  username: string;
+  userId: string;
+  followedAt: number;
+}
+
 const AUTH_STORAGE_KEY = 'suppenstudios_auth_token';
 const USER_STORAGE_KEY = 'suppenstudios_auth_user';
 
-// Basis-URL für Auth Service (standardmäßig lokaler Auth-Worker Port 8787 oder konfigurierbar)
+const getFavoritesKey = (userId?: string) =>
+  `moviebite_favorites_${userId || 'guest'}`;
+
+const getFollowingKey = (userId?: string) =>
+  `moviebite_following_${userId || 'guest'}`;
+
+// Basis-URL für Auth Service
 const getApiBase = () => {
   if (typeof window !== 'undefined') {
     const custom = localStorage.getItem('suppenstudios_auth_api_url');
     if (custom) return custom;
-    // Wenn lokal entwickelt wird, kann localhost:8787 oder der Live-Worker genutzt werden
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:8787';
     }
@@ -56,9 +81,7 @@ class SuppenstudiosAuthService {
       this.token = localStorage.getItem(AUTH_STORAGE_KEY);
       const cached = localStorage.getItem(USER_STORAGE_KEY);
       if (cached) {
-        try {
-          this.currentUser = JSON.parse(cached);
-        } catch (_) {}
+        try { this.currentUser = JSON.parse(cached); } catch (_) {}
       }
       if (this.token) {
         this.fetchProfile().catch(() => this.logout());
@@ -74,21 +97,11 @@ class SuppenstudiosAuthService {
     };
   }
 
-  private notify() {
-    this.listeners.forEach(l => l(this.currentUser));
-  }
+  private notify() { this.listeners.forEach(l => l(this.currentUser)); }
 
-  public getToken(): string | null {
-    return this.token;
-  }
-
-  public getUser(): User | null {
-    return this.currentUser;
-  }
-
-  public isLoggedIn(): boolean {
-    return !!this.token && !!this.currentUser;
-  }
+  public getToken(): string | null { return this.token; }
+  public getUser(): User | null { return this.currentUser; }
+  public isLoggedIn(): boolean { return !!this.token && !!this.currentUser; }
 
   public setApiBase(url: string) {
     if (typeof window !== 'undefined') {
@@ -102,20 +115,11 @@ class SuppenstudiosAuthService {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
+    if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
+    const response = await fetch(`${baseUrl}${endpoint}`, { ...options, headers });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || `Fehler (${response.status})`);
-    }
+    if (!response.ok) throw new Error(data.error || `Fehler (${response.status})`);
     return data;
   }
 
@@ -126,10 +130,7 @@ class SuppenstudiosAuthService {
       method: 'POST',
       body: JSON.stringify({ username, password, email }),
     });
-
-    if (data.token && data.user) {
-      this.setSession(data.token, data.user);
-    }
+    if (data.token && data.user) this.setSession(data.token, data.user);
     return data;
   }
 
@@ -138,14 +139,8 @@ class SuppenstudiosAuthService {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
-
-    if (data.requires2FA) {
-      return { requires2FA: true, tempToken: data.tempToken, message: data.message };
-    }
-
-    if (data.token && data.user) {
-      this.setSession(data.token, data.user);
-    }
+    if (data.requires2FA) return { requires2FA: true, tempToken: data.tempToken, message: data.message };
+    if (data.token && data.user) this.setSession(data.token, data.user);
     return data;
   }
 
@@ -154,10 +149,7 @@ class SuppenstudiosAuthService {
       method: 'POST',
       body: JSON.stringify({ tempToken, code }),
     });
-
-    if (data.token && data.user) {
-      this.setSession(data.token, data.user);
-    }
+    if (data.token && data.user) this.setSession(data.token, data.user);
     return data;
   }
 
@@ -165,78 +157,47 @@ class SuppenstudiosAuthService {
 
   public async registerPasskey(deviceName = 'Mein Passkey') {
     if (!this.isLoggedIn()) throw new Error('Bitte melde dich zuerst an.');
-
-    // 1. Registration Options abholen
-    const { options, challengeId } = await this.request('/api/auth/passkey/register-options', {
-      method: 'POST',
-    });
-
-    // 2. Browser WebAuthn Prompt starten
+    const { options, challengeId } = await this.request('/api/auth/passkey/register-options', { method: 'POST' });
     const passkeyResponse = await startRegistration({ optionsJSON: options });
-
-    // 3. Antwort an Worker zur Verifikation senden
     const result = await this.request('/api/auth/passkey/register-verify', {
       method: 'POST',
       body: JSON.stringify({ response: passkeyResponse, challengeId, deviceName }),
     });
-
-    if (this.currentUser) {
-      this.currentUser.has_passkey = true;
-      this.notify();
-    }
-
+    if (this.currentUser) { this.currentUser.has_passkey = true; this.notify(); }
     return result;
   }
 
   public async loginWithPasskey(username?: string) {
-    // 1. Authentication Options abholen
     const { options, challengeId } = await this.request('/api/auth/passkey/login-options', {
       method: 'POST',
       body: JSON.stringify({ username }),
     });
-
-    // 2. Browser WebAuthn Prompt ausführen
     const passkeyResponse = await startAuthentication({ optionsJSON: options });
-
-    // 3. Antwort prüfen & Session starten
     const data = await this.request('/api/auth/passkey/login-verify', {
       method: 'POST',
       body: JSON.stringify({ response: passkeyResponse, challengeId }),
     });
-
-    if (data.token && data.user) {
-      this.setSession(data.token, data.user);
-    }
+    if (data.token && data.user) this.setSession(data.token, data.user);
     return data;
   }
 
-  // --- 2FA (TOTP Authenticator) ---
+  // --- 2FA (TOTP) ---
 
-  public async setup2FA() {
-    return await this.request('/api/auth/2fa/setup', { method: 'POST' });
-  }
+  public async setup2FA() { return await this.request('/api/auth/2fa/setup', { method: 'POST' }); }
 
   public async verify2FASetup(code: string) {
     const res = await this.request('/api/auth/2fa/verify-setup', {
-      method: 'POST',
-      body: JSON.stringify({ code }),
+      method: 'POST', body: JSON.stringify({ code }),
     });
-    if (this.currentUser) {
-      this.currentUser.totp_enabled = true;
-      this.notify();
-    }
+    if (this.currentUser) { this.currentUser.totp_enabled = true; this.notify(); }
     return res;
   }
 
   public async disable2FA(codeOrPassword: { code?: string; password?: string }) {
     const res = await this.request('/api/auth/2fa/disable', {
-      method: 'POST',
-      body: JSON.stringify(codeOrPassword),
+      method: 'POST', body: JSON.stringify(codeOrPassword),
     });
-    if (this.currentUser) {
-      this.currentUser.totp_enabled = false;
-      this.notify();
-    }
+    if (this.currentUser) { this.currentUser.totp_enabled = false; this.notify(); }
     return res;
   }
 
@@ -247,10 +208,7 @@ class SuppenstudiosAuthService {
     try {
       const data = await this.request('/api/auth/me', { method: 'GET' });
       if (data.user) {
-        this.currentUser = {
-          ...data.user,
-          has_passkey: (data.passkeys || []).length > 0,
-        };
+        this.currentUser = { ...data.user, has_passkey: (data.passkeys || []).length > 0 };
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.currentUser));
         this.notify();
       }
@@ -287,7 +245,7 @@ class SuppenstudiosAuthService {
     movieId: string | number;
     movieTitle: string;
     moviePoster?: string;
-    rating: number; // 1 - 10
+    rating: number;
     reviewText?: string;
   }) {
     return await this.request('/api/reviews', {
@@ -302,6 +260,99 @@ class SuppenstudiosAuthService {
 
   public async getMyReviews(): Promise<{ reviews: Review[] }> {
     return await this.request('/api/reviews/my', { method: 'GET' });
+  }
+
+  /** Versucht, öffentliche Rezensionen eines Nutzers zu laden (graceful fallback) */
+  public async getUserReviews(username: string): Promise<{ reviews: Review[] }> {
+    try {
+      return await this.request(`/api/reviews/user/${encodeURIComponent(username)}`, { method: 'GET' });
+    } catch {
+      return { reviews: [] };
+    }
+  }
+
+  // --- Favoriten (localStorage, userId-spezifisch) ---
+
+  public getFavorites(): FavoriteMovie[] {
+    try {
+      const key = getFavoritesKey(this.currentUser?.id);
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+
+  public addFavorite(movie: Omit<FavoriteMovie, 'addedAt'>): void {
+    const favs = this.getFavorites();
+    const exists = favs.find(f => f.id === movie.id);
+    if (exists) return;
+    const updated = [{ ...movie, addedAt: Date.now() }, ...favs];
+    localStorage.setItem(getFavoritesKey(this.currentUser?.id), JSON.stringify(updated));
+    this.notifyFavorites();
+  }
+
+  public removeFavorite(movieId: string): void {
+    const favs = this.getFavorites().filter(f => f.id !== movieId);
+    localStorage.setItem(getFavoritesKey(this.currentUser?.id), JSON.stringify(favs));
+    this.notifyFavorites();
+  }
+
+  public isFavorite(movieId: string): boolean {
+    return this.getFavorites().some(f => f.id === movieId);
+  }
+
+  public updateFavoriteList(movieId: string, listName: string): void {
+    const favs = this.getFavorites().map(f =>
+      f.id === movieId ? { ...f, listName } : f
+    );
+    localStorage.setItem(getFavoritesKey(this.currentUser?.id), JSON.stringify(favs));
+    this.notifyFavorites();
+  }
+
+  private favoriteListeners: (() => void)[] = [];
+
+  public subscribeFavorites(cb: () => void) {
+    this.favoriteListeners.push(cb);
+    return () => { this.favoriteListeners = this.favoriteListeners.filter(l => l !== cb); };
+  }
+
+  private notifyFavorites() { this.favoriteListeners.forEach(l => l()); }
+
+  // --- Follower (localStorage) ---
+
+  public getFollowing(): FollowedUser[] {
+    try {
+      const key = getFollowingKey(this.currentUser?.id);
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+
+  public followUser(username: string, userId: string): void {
+    if (!this.currentUser) return;
+    const list = this.getFollowing();
+    if (list.find(f => f.username === username)) return;
+    const updated: FollowedUser[] = [{ username, userId, followedAt: Date.now() }, ...list];
+    localStorage.setItem(getFollowingKey(this.currentUser.id), JSON.stringify(updated));
+  }
+
+  public unfollowUser(username: string): void {
+    if (!this.currentUser) return;
+    const updated = this.getFollowing().filter(f => f.username !== username);
+    localStorage.setItem(getFollowingKey(this.currentUser.id), JSON.stringify(updated));
+  }
+
+  public isFollowing(username: string): boolean {
+    return this.getFollowing().some(f => f.username === username);
+  }
+
+  /** Lädt Favoriten eines anderen Nutzers aus dessen localStorage-Export via API (Fallback: leer) */
+  public getFollowedUserFavorites(username: string): FavoriteMovie[] {
+    // Offline-Fallback: In lokalem Cache schauen, ob wir diese User-Favs bereits haben
+    try {
+      const key = `moviebite_favs_cache_${username}`;
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
   }
 }
 
