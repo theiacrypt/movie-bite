@@ -173,7 +173,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 type="text"
                 required
                 maxLength={20}
-                placeholder="z. B. Alex, Cineast99..."
+                placeholder="Dein Name..."
                 value={name}
                 onChange={e => setName(e.target.value)}
                 className="w-full bg-theater-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cinema-red transition-all"
@@ -188,7 +188,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                   type="text"
                   required
                   maxLength={6}
-                  placeholder="z. B. ABC123"
+                  placeholder="Code eingeben..."
                   value={roomCode}
                   onChange={e => setRoomCode(e.target.value.toUpperCase())}
                   className="w-full bg-theater-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-center font-mono font-bold tracking-widest text-cinema-gold placeholder-slate-600 focus:outline-none focus:border-cinema-gold transition-all uppercase"

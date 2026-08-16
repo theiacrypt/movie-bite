@@ -146,7 +146,7 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
             <input
               type="text"
               autoFocus
-              placeholder="Titel suchen (z. B. Interstellar, Inception, Dune, Barbie)..."
+              placeholder="Film oder Serie suchen..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full bg-theater-950 border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cinema-red transition-all"
