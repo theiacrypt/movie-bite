@@ -87,6 +87,16 @@ class SuppenstudiosAuthService {
 
   constructor() {
     if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ssoToken = urlParams.get('token');
+      if (ssoToken) {
+        localStorage.setItem(AUTH_STORAGE_KEY, ssoToken);
+        urlParams.delete('token');
+        urlParams.delete('sso_auth');
+        const cleanQuery = urlParams.toString() ? `?${urlParams.toString()}` : '';
+        window.history.replaceState({}, document.title, `${window.location.pathname}${cleanQuery}${window.location.hash}`);
+      }
+
       this.token = localStorage.getItem(AUTH_STORAGE_KEY) || this.getCookie('suppenstudios_session');
       const cached = localStorage.getItem(USER_STORAGE_KEY);
       if (cached) {
@@ -97,6 +107,16 @@ class SuppenstudiosAuthService {
         if (!cached) this.logout();
       });
     }
+  }
+
+  public redirectToSSO(options: { mode?: 'passkey' | 'password' | 'register'; returnTo?: string } = {}) {
+    if (typeof window === 'undefined') return;
+    const returnTo = options.returnTo || window.location.href;
+    const authUrl = new URL('https://auth.suppenstudios.work');
+    authUrl.searchParams.set('return_to', returnTo);
+    authUrl.searchParams.set('app', 'Movie-Bite');
+    if (options.mode) authUrl.searchParams.set('mode', options.mode);
+    window.location.href = authUrl.toString();
   }
 
   private getCookie(name: string): string | null {

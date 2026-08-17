@@ -370,16 +370,28 @@ export const SuppenstudiosAuthModal: React.FC<SuppenstudiosAuthModalProps> = ({ 
                   <div className="flex-grow border-t border-white/10"></div>
                 </div>
 
-                {/* Passkey Login Button */}
-                <button
-                  type="button"
-                  onClick={handlePasskeyLogin}
-                  disabled={loading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-theater-800 hover:bg-theater-750 border border-white/15 flex items-center justify-center gap-2 text-white font-semibold text-xs transition-all active:scale-[0.98]"
-                >
-                  <Fingerprint className="w-4 h-4 text-emerald-400" />
-                  <span>Mit Passkey (Touch ID / Windows Hello) anmelden</span>
-                </button>
+                <div className="space-y-2 pt-1">
+                  {/* Central SSO Portal Button */}
+                  <button
+                    type="button"
+                    onClick={() => suppenstudiosAuth.redirectToSSO({ mode: 'passkey' })}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-500/10 hover:from-amber-500/30 hover:to-amber-500/20 border border-amber-500/40 flex items-center justify-center gap-2 text-amber-300 font-bold text-xs transition-all active:scale-[0.98] shadow-md"
+                  >
+                    <Fingerprint className="w-4 h-4 text-amber-400" />
+                    <span>Zentrales Login-Portal (auth.suppenstudios.work)</span>
+                  </button>
+
+                  {/* Passkey Login Button */}
+                  <button
+                    type="button"
+                    onClick={handlePasskeyLogin}
+                    disabled={loading}
+                    className="w-full py-2.5 px-4 rounded-xl bg-theater-800 hover:bg-theater-750 border border-white/15 flex items-center justify-center gap-2 text-white font-semibold text-xs transition-all active:scale-[0.98]"
+                  >
+                    <Fingerprint className="w-4 h-4 text-emerald-400" />
+                    <span>Direkt mit Passkey anmelden</span>
+                  </button>
+                </div>
               </form>
             ) : (
               /* --- Registrieren --- */
