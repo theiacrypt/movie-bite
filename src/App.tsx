@@ -59,7 +59,7 @@ export function App() {
         phase={room?.phase}
         playerCount={room?.players.length}
         onOpenShare={() => setIsShareOpen(true)}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAuth={() => suppenstudiosAuth.redirectToSSO()}
         onOpenFavorites={() => setIsFavoritesOpen(true)}
       />
 
@@ -71,7 +71,7 @@ export function App() {
             initialRoomCode={initialRoomCode}
             error={error}
             loading={loading}
-            onOpenAuth={() => setIsAuthOpen(true)}
+            onOpenAuth={() => suppenstudiosAuth.redirectToSSO()}
             onOpenReview={(movieId, movieTitle, moviePoster) =>
               setReviewMovie({ id: movieId, title: movieTitle, poster: moviePoster } as Movie)
             }
@@ -129,7 +129,7 @@ export function App() {
       <FavoritesModal
         isOpen={isFavoritesOpen}
         onClose={() => setIsFavoritesOpen(false)}
-        onOpenAuth={() => { setIsFavoritesOpen(false); setIsAuthOpen(true); }}
+        onOpenAuth={() => { setIsFavoritesOpen(false); suppenstudiosAuth.redirectToSSO(); }}
       />
 
       {/* Film-Rezensionen Modal */}
