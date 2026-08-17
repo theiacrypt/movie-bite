@@ -13,7 +13,9 @@ import {
   AlertCircle,
   Sparkles,
   Film,
-  Star
+  Star,
+  ExternalLink,
+  ArrowRight
 } from 'lucide-react';
 import { suppenstudiosAuth, User, Review } from '../services/suppenstudiosAuth.js';
 
@@ -224,7 +226,9 @@ export const SuppenstudiosAuthModal: React.FC<SuppenstudiosAuthModalProps> = ({ 
             </div>
             <div>
               <h2 className="text-base font-bold text-white tracking-wide">Suppenstudios ID</h2>
-              <p className="text-[11px] text-slate-400">Zentraler Account & Filmrezensionen</p>
+              <p className="text-[11px] text-slate-400">
+                Zentraler Account für alle Dienste • <a href="https://account.suppenstudios.work" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline">account.suppenstudios.work</a>
+              </p>
             </div>
           </div>
           <button
@@ -549,6 +553,31 @@ export const SuppenstudiosAuthModal: React.FC<SuppenstudiosAuthModalProps> = ({ 
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* Central Account Portal Banner */}
+              <a
+                href="https://account.suppenstudios.work"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-600/15 to-cinema-red/10 border border-amber-500/30 flex items-center justify-between hover:border-amber-500/60 transition-all group"
+                title="Zentrales Konto auf account.suppenstudios.work verwalten"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-base font-bold shadow-sm">
+                    🍲
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold text-amber-300 group-hover:text-amber-200 flex items-center gap-1.5">
+                      <span>Suppenstudios Account Dashboard</span>
+                      <ExternalLink className="w-3 h-3 text-amber-400" />
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Avatare, RPG-Badges, Passkeys & Sicherheit auf account.suppenstudios.work verwalten
+                    </div>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+              </a>
 
               {/* Sicherheits-Optionen */}
               <div className="space-y-2.5">

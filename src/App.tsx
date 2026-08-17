@@ -155,7 +155,15 @@ export function App() {
             <span>•</span>
             <span className="text-slate-300 font-medium">Suppenstudios</span>
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap justify-center">
+            <a
+              href="https://account.suppenstudios.work"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400/90 hover:text-amber-300 transition font-medium"
+            >
+              Suppenstudios Account
+            </a>
             <button
               onClick={() => { setLegalTab('impressum'); setLegalModalOpen(true); }}
               className="text-slate-400 hover:text-slate-200 transition underline underline-offset-4"
