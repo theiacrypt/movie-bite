@@ -116,6 +116,7 @@ class SuppenstudiosAuthService {
     authUrl.searchParams.set('return_to', returnTo);
     authUrl.searchParams.set('app', 'Movie-Bite');
     if (options.mode) authUrl.searchParams.set('mode', options.mode);
+    if (this.token) authUrl.searchParams.set('token', this.token);
     window.location.href = authUrl.toString();
   }
 
