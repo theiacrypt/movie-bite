@@ -635,20 +635,13 @@ export const SuppenstudiosAuthModal: React.FC<SuppenstudiosAuthModalProps> = ({ 
                     </div>
                   </div>
 
-                  <div className="flex gap-2 pt-1">
-                    <input
-                      type="text"
-                      placeholder="Gerätename (z. B. MacBook)"
-                      value={deviceName}
-                      onChange={(e) => setDeviceName(e.target.value)}
-                      className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-theater-900 border border-white/10 text-white focus:outline-none focus:border-cinema-red"
-                    />
+                  <div className="pt-1">
                     <button
-                      onClick={handleRegisterPasskey}
-                      disabled={loading}
-                      className="px-3 py-1.5 rounded-lg bg-theater-800 hover:bg-theater-750 text-xs font-semibold text-white border border-white/10"
+                      onClick={() => suppenstudiosAuth.redirectToCreatePasskey()}
+                      className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-amber-500/20 to-amber-500/10 hover:from-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/30 flex items-center justify-center gap-2 transition"
                     >
-                      + Passkey hinzufügen
+                      <Fingerprint className="w-4 h-4 text-amber-400" />
+                      <span>Passkey auf auth.suppenstudios.work hinzufügen</span>
                     </button>
                   </div>
                 </div>

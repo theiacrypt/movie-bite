@@ -109,7 +109,7 @@ class SuppenstudiosAuthService {
     }
   }
 
-  public redirectToSSO(options: { mode?: 'passkey' | 'password' | 'register'; returnTo?: string } = {}) {
+  public redirectToSSO(options: { mode?: 'passkey' | 'password' | 'register' | 'create_passkey' | 'add_passkey'; returnTo?: string } = {}) {
     if (typeof window === 'undefined') return;
     const returnTo = options.returnTo || window.location.href;
     const authUrl = new URL('https://auth.suppenstudios.work');
@@ -117,6 +117,10 @@ class SuppenstudiosAuthService {
     authUrl.searchParams.set('app', 'Movie-Bite');
     if (options.mode) authUrl.searchParams.set('mode', options.mode);
     window.location.href = authUrl.toString();
+  }
+
+  public redirectToCreatePasskey(returnTo?: string) {
+    this.redirectToSSO({ mode: 'create_passkey', returnTo });
   }
 
   private getCookie(name: string): string | null {
