@@ -5,6 +5,7 @@ export interface User {
   username: string;
   email?: string;
   avatar_url?: string;
+  role?: string;
   totp_enabled: boolean;
   has_passkey?: boolean;
 }
@@ -21,6 +22,7 @@ export interface Review {
   user_id: string;
   username?: string;
   avatar_url?: string;
+  role?: string;
 }
 
 export interface ReviewsResponse {
@@ -135,6 +137,11 @@ class SuppenstudiosAuthService {
   public getToken(): string | null { return this.token; }
   public getUser(): User | null { return this.currentUser; }
   public isLoggedIn(): boolean { return !!this.token && !!this.currentUser; }
+  public isChef(): boolean {
+    if (!this.currentUser || !this.token) return false;
+    if (this.currentUser.role === 'chef') return true;
+    return this.currentUser.username.toLowerCase() === 'chef';
+  }
 
   public setApiBase(url: string) {
     if (typeof window !== 'undefined') {

@@ -34,10 +34,12 @@ interface MovieReviewsModalProps {
   onOpenAuth?: () => void;
 }
 
-const CHEF_USERNAME = 'Chef';
-
-function isChef(username?: string): boolean {
-  return username?.toLowerCase() === CHEF_USERNAME.toLowerCase();
+function isChef(item?: string | { username?: string; role?: string }): boolean {
+  if (!item) return false;
+  if (typeof item === 'string') {
+    return item.toLowerCase() === 'chef';
+  }
+  return item.role === 'chef' || item.username?.toLowerCase() === 'chef';
 }
 
 interface ReviewWithLocal extends Review {

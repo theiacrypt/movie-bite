@@ -327,7 +327,7 @@ export const DiscoverPanel: React.FC<DiscoverPanelProps> = ({ onOpenAuth, onOpen
               </p>
               <div className="space-y-2">
                 {userResults.map(user => {
-                  const isChef = user.username.toLowerCase() === CHEF_USERNAME.toLowerCase();
+                  const isChef = (user as any).role === 'chef' || user.username.toLowerCase() === CHEF_USERNAME.toLowerCase();
                   const following = suppenstudiosAuth.isFollowing(user.username);
                   return (
                     <div
