@@ -3,9 +3,8 @@ import {
   Flame, RefreshCw, Crown, Star, Heart, MessageSquare,
   ThumbsUp, Film, Sparkles, Quote, AlertTriangle
 } from 'lucide-react';
-import { suppenstudiosAuth, Review } from '../services/suppenstudiosAuth.js';
+import { suppenstudiosAuth, Review, isChefUser } from '../services/suppenstudiosAuth.js';
 
-const CHEF_USERNAME = 'Chef';
 const DISPLAY_COUNT = 6;
 
 interface TrendingReviewsProps {
@@ -19,7 +18,7 @@ function weightedShuffle(reviews: Review[], count: number): Review[] {
   // Gewichtete Zufalls-Scores: helpful_count * Gewichtsfaktor + Zufall
   const scored = reviews.map(r => {
     const likes   = (r as any).helpful_count ?? 0;
-    const isChef  = r.role === 'chef' || r.username?.toLowerCase() === 'chef';
+    const isChef  = isChefUser(r);
     // Chef bekommt +4 Bonus, dann weighted random
     const score   = (likes * 2.5) + (isChef ? 4 : 0) + Math.random() * 6;
     return { review: r, score };
@@ -140,7 +139,7 @@ export const TrendingReviews: React.FC<TrendingReviewsProps> = ({ onOpenReview }
       {/* ─── Review Cards ─────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {displayed.map((review, idx) => {
-          const isChef    = review.role === 'chef' || review.username?.toLowerCase() === 'chef';
+          const isChef    = isChefUser(review);
           const spoiler   = hasSpoiler(review.review_text ?? '');
           const text      = cleanReviewText(review.review_text ?? '');
           const revealed  = revealedSpoilers.has(review.id);

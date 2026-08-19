@@ -80,6 +80,17 @@ export interface UserSearchResult {
   review_count?: number;
 }
 
+export function isChefUser(item?: any): boolean {
+  if (!item) return false;
+  if (typeof item === 'string') {
+    const clean = item.trim().toLowerCase();
+    return clean === 'suppenchris' || clean === 'chef';
+  }
+  if (item.role === 'chef' || item.role === 'admin') return true;
+  const username = (item.username || item.author_name || item.creator_name || '').toLowerCase();
+  return username === 'suppenchris' || username === 'chef';
+}
+
 class SuppenstudiosAuthService {
   private token: string | null = null;
   private currentUser: User | null = null;
@@ -164,8 +175,7 @@ class SuppenstudiosAuthService {
   public isLoggedIn(): boolean { return !!this.token && !!this.currentUser; }
   public isChef(): boolean {
     if (!this.currentUser || !this.token) return false;
-    if (this.currentUser.role === 'chef') return true;
-    return this.currentUser.username.toLowerCase() === 'chef';
+    return isChefUser(this.currentUser);
   }
 
   public setApiBase(url: string) {

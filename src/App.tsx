@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header.js';
 import { WelcomeScreen } from './components/WelcomeScreen.js';
 import { LobbyView } from './components/LobbyView.js';
@@ -12,6 +12,7 @@ import { FavoritesModal } from './components/FavoritesModal.js';
 import { Movie } from './types/game.js';
 import { useRoom } from './hooks/useRoom.js';
 import { suppenstudiosAuth } from './services/suppenstudiosAuth.js';
+import { notificationService } from './services/notificationService.js';
 
 import { LegalModal } from './components/LegalModal.js';
 
@@ -31,6 +32,7 @@ export function App() {
     loading,
     createRoom,
     joinRoom,
+    updateSettings,
     toggleReady,
     startPhase,
     addMovie,
@@ -38,6 +40,8 @@ export function App() {
     submitVotes,
     restartGame
   } = useRoom();
+
+  const prevPhaseRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -48,6 +52,29 @@ export function App() {
       }
     }
   }, []);
+
+  // Synchronize URL with active room code
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const currentUrl = new URL(window.location.href);
+      if (room?.code) {
+        if (currentUrl.searchParams.get('room') !== room.code) {
+          currentUrl.searchParams.set('room', room.code);
+          window.history.replaceState({}, '', currentUrl.toString());
+        }
+      }
+    }
+  }, [room?.code]);
+
+  // Trigger push notification on phase transition
+  useEffect(() => {
+    if (room?.phase && room.phase !== prevPhaseRef.current) {
+      if (prevPhaseRef.current !== null) {
+        notificationService.notifyPhaseChange(room.phase, room.code);
+      }
+      prevPhaseRef.current = room.phase;
+    }
+  }, [room?.phase, room?.code]);
 
   const openReview = (movie: Movie) => {
     setReviewMovie(movie);
@@ -84,6 +111,8 @@ export function App() {
             onToggleReady={toggleReady}
             onStartRound1={() => startPhase('ROUND_1_SUGGEST')}
             onOpenShare={() => setIsShareOpen(true)}
+            onUpdateSettings={updateSettings}
+            onOpenAuth={() => suppenstudiosAuth.redirectToSSO()}
           />
         ) : room.phase === 'ROUND_1_SUGGEST' ? (
           <Round1Suggestions
@@ -103,8 +132,8 @@ export function App() {
           />
         ) : (
           <WinnerShowdown
-            room={room}
-            currentPlayerId={playerId}
+            results={room.results || []}
+            isHost={room.hostId === playerId}
             onRestartGame={restartGame}
             onOpenReview={openReview}
           />

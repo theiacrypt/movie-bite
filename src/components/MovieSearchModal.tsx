@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, X, Star, Plus, Film, Loader2, Music, SlidersHorizontal, Clock, ArrowUpDown, Sparkles, RotateCcw, Check } from 'lucide-react';
+import { Search, X, Star, Plus, Film, Loader2, Music, SlidersHorizontal, Clock, ArrowUpDown, Sparkles, RotateCcw, Check, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { SearchMovieResult } from '../types/game.js';
 import { soundFx } from '../services/soundEffects.js';
 import { searchMoviesUniversal } from '../services/movieSearch.js';
+import { MovieDetailModal } from './MovieDetailModal.js';
 
 interface MovieSearchModalProps {
   isOpen: boolean;
@@ -48,6 +49,19 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
   const [results, setResults] = useState<SearchMovieResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedPlotIds, setExpandedPlotIds] = useState<Set<string>>(new Set());
+  const [previewMovie, setPreviewMovie] = useState<any>(null);
+
+  const togglePlot = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    soundFx.playPop();
+    setExpandedPlotIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // Active filters count
   const activeFiltersCount = useMemo(() => {
@@ -113,7 +127,7 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 animate-in fade-in">
-      {/* Backdrop with negative inset to ensure entire screen including edges is completely blurred */}
+      {/* Backdrop */}
       <div 
         className="fixed -inset-10 bg-black/80 backdrop-blur-md cursor-pointer"
         onClick={onClose}
@@ -129,7 +143,7 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
               </div>
               <div>
                 <h3 className="font-display font-bold text-base sm:text-lg text-white">Film suchen & vorschlagen</h3>
-                <p className="text-[11px] text-slate-400">Entdecke Filme nach Genre, Soundtrack, Bewertung & Länge</p>
+                <p className="text-[11px] text-slate-400">Finde Filme mit vollständiger Beschreibung & Details</p>
               </div>
             </div>
             <button
@@ -400,6 +414,10 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
 
           {results.map((movie) => {
             const isAdded = alreadyAddedIds.includes(movie.id);
+            const isExpanded = expandedPlotIds.has(movie.id);
+            const plotText = movie.plot || "Keine Inhaltsangabe verfügbar.";
+            const isLongPlot = plotText.length > 110;
+
             return (
               <div
                 key={movie.id}
@@ -409,19 +427,32 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
                     : 'bg-theater-900/70 border-white/10 hover:border-cinema-red/40 hover:bg-theater-850/80 shadow-md'
                 }`}
               >
-                <img
-                  src={movie.poster}
-                  alt={movie.title}
-                  className="w-16 sm:w-20 h-24 sm:h-28 object-cover rounded-xl shrink-0 shadow-md bg-theater-950"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
+                <div 
+                  className="relative cursor-pointer shrink-0"
+                  onClick={() => setPreviewMovie(movie)}
+                  title="Klicken für Filmdetails"
+                >
+                  <img
+                    src={movie.poster}
+                    alt={movie.title}
+                    className="w-16 sm:w-20 h-24 sm:h-28 object-cover rounded-xl shadow-md bg-theater-950 hover:opacity-90 transition-opacity"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <div className="absolute bottom-1 right-1 p-1 rounded-md bg-theater-950/80 text-slate-300 backdrop-blur-sm sm:hidden">
+                    <Info className="w-3 h-3" />
+                  </div>
+                </div>
 
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-display font-bold text-sm sm:text-base text-white truncate">
+                      <h4 
+                        onClick={() => setPreviewMovie(movie)}
+                        className="font-display font-bold text-sm sm:text-base text-white hover:text-cinema-red cursor-pointer truncate transition-colors"
+                        title="Klicken für Filmdetails"
+                      >
                         {movie.title}
                       </h4>
                       <span className="text-xs font-semibold text-slate-400 bg-theater-950 px-2 py-0.5 rounded-md shrink-0 border border-white/5">
@@ -460,19 +491,50 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
                       )}
                     </div>
 
-                    <p className="text-xs text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">
-                      {movie.plot}
-                    </p>
+                    {/* Movie Plot with Expand / Collapse */}
+                    <div className="mt-2 text-xs text-slate-300 leading-relaxed bg-theater-950/40 p-2 rounded-xl border border-white/5">
+                      <p className={isExpanded ? '' : 'line-clamp-2'}>
+                        {plotText}
+                      </p>
+                      {isLongPlot && (
+                        <button
+                          type="button"
+                          onClick={(e) => togglePlot(movie.id, e)}
+                          className="mt-1 text-[11px] font-bold text-cinema-red hover:text-red-300 flex items-center gap-0.5 transition-colors"
+                        >
+                          {isExpanded ? (
+                            <>
+                              <span>Weniger anzeigen</span>
+                              <ChevronUp className="w-3 h-3" />
+                            </>
+                          ) : (
+                            <>
+                              <span>Vollständige Beschreibung lesen</span>
+                              <ChevronDown className="w-3 h-3" />
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="pt-2 flex justify-end">
+                  <div className="pt-2 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMovie(movie)}
+                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-theater-800 transition-colors"
+                    >
+                      <Info className="w-3.5 h-3.5 text-cinema-neon" />
+                      <span>Details & Besetzung</span>
+                    </button>
+
                     <button
                       disabled={isAdded}
                       onClick={() => {
                         soundFx.playPop();
                         onSelectMovie(movie);
                       }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                         isAdded
                           ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
                           : 'bg-gradient-to-r from-cinema-red to-cinema-red-deep hover:from-cinema-red-hover hover:to-cinema-red text-white shadow-md shadow-cinema-red/20 active:scale-95'
@@ -497,6 +559,13 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
           })}
         </div>
       </div>
+
+      {previewMovie && (
+        <MovieDetailModal
+          movie={previewMovie}
+          onClose={() => setPreviewMovie(null)}
+        />
+      )}
     </div>
   );
 };

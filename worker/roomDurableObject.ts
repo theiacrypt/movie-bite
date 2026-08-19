@@ -119,6 +119,13 @@ export class RoomDurableObject {
           joinedAt: Date.now()
         };
 
+        const initialSettings = {
+          maxSuggestionsPerPlayer: typeof data?.settings?.maxSuggestionsPerPlayer === 'number' ? data.settings.maxSuggestionsPerPlayer : 3,
+          votingTimeLimitSeconds: 0,
+          allowDislikes: data?.settings?.allowDislikes ?? true,
+          superVoteWeight: 2
+        };
+
         this.room = {
           code,
           hostId: host.id,
@@ -126,12 +133,7 @@ export class RoomDurableObject {
           players: [host],
           movies: [],
           votes: {},
-          settings: {
-            maxSuggestionsPerPlayer: 3,
-            votingTimeLimitSeconds: 0,
-            allowDislikes: true,
-            superVoteWeight: 2
-          },
+          settings: initialSettings,
           createdAt: Date.now()
         };
 
@@ -163,19 +165,23 @@ export class RoomDurableObject {
         if (existingPlayer) {
           existingPlayer.name = name || existingPlayer.name;
           existingPlayer.avatar = avatar || existingPlayer.avatar;
-          console.log(`[DO] Spieler ${name} (${targetPlayerId}) wiederverbunden.`);
+          if (this.room.hostId === targetPlayerId) {
+            existingPlayer.isHost = true;
+          }
+          console.log(`[DO] Spieler ${name} (${targetPlayerId}) wiederverbunden. Host? ${existingPlayer.isHost}`);
         } else {
+          const isFirstPlayer = this.room.players.length === 0 || this.room.hostId === targetPlayerId;
           const newPlayer: Player = {
             id: targetPlayerId,
             name: name || `Gast ${this.room.players.length + 1}`,
             avatar,
-            isHost: this.room.players.length === 0,
-            isReady: false,
+            isHost: isFirstPlayer,
+            isReady: isFirstPlayer,
             hasFinishedVoting: false,
             joinedAt: Date.now()
           };
 
-          if (newPlayer.isHost) {
+          if (isFirstPlayer) {
             this.room.hostId = newPlayer.id;
           }
 
@@ -185,6 +191,23 @@ export class RoomDurableObject {
 
         await this.saveRoom();
         sendResponse({ success: true, room: this.room, playerId: targetPlayerId });
+        this.broadcastRoom();
+        break;
+      }
+
+      case 'update_settings': {
+        if (!this.room) return;
+        if (this.room.hostId !== client.playerId) {
+          sendResponse({ success: false, error: 'Nur der Host kann Einstellungen ändern' });
+          return;
+        }
+
+        this.room.settings = {
+          ...this.room.settings,
+          ...data
+        };
+        await this.saveRoom();
+        sendResponse({ success: true, room: this.room });
         this.broadcastRoom();
         break;
       }
@@ -229,9 +252,10 @@ export class RoomDurableObject {
           return;
         }
 
+        const maxLimit = this.room.settings.maxSuggestionsPerPlayer;
         const playerMovies = this.room.movies.filter(m => m.suggestedBy?.id === client.playerId);
-        if (playerMovies.length >= this.room.settings.maxSuggestionsPerPlayer) {
-          sendResponse({ success: false, error: `Maximal ${this.room.settings.maxSuggestionsPerPlayer} Vorschläge pro Spieler erlaubt.` });
+        if (maxLimit > 0 && playerMovies.length >= maxLimit) {
+          sendResponse({ success: false, error: `Maximal ${maxLimit} Vorschläge pro Spieler erlaubt.` });
           return;
         }
 
@@ -303,7 +327,7 @@ export class RoomDurableObject {
         this.room.results = undefined;
         this.room.winner = undefined;
         this.room.players.forEach(p => {
-          p.isReady = false;
+          p.isReady = p.isHost;
           p.hasFinishedVoting = false;
         });
 
@@ -319,24 +343,9 @@ export class RoomDurableObject {
     this.sockets.delete(ws);
 
     if (!client || !this.room) return;
-
-    // Check if client has another open connection (e.g. reconnecting)
-    const hasOtherSocket = Array.from(this.sockets.values()).some(c => c.playerId === client.playerId);
-    if (hasOtherSocket) return;
-
-    // Remove player
-    this.room.players = this.room.players.filter(p => p.id !== client.playerId);
-
-    if (this.room.hostId === client.playerId && this.room.players.length > 0) {
-      this.room.players[0].isHost = true;
-      this.room.hostId = this.room.players[0].id;
-    }
-
+    console.log(`[DO] Socket getrennt für ${client.name} (${client.playerId}). Raum bleibt zur Wiederverbindung erhalten.`);
+    // Player remains in the room in case of reload / tab switch
     await this.saveRoom();
-
-    if (this.room.players.length > 0) {
-      this.broadcastRoom();
-    }
   }
 
   private calculateResults() {
@@ -346,6 +355,7 @@ export class RoomDurableObject {
       let likes = 0;
       let dislikes = 0;
       let superlikes = 0;
+      let neutrals = 0;
       const voters: { playerName: string; playerAvatar: string; type: any }[] = [];
 
       Object.entries(this.room!.votes).forEach(([voterId, userVotes]) => {
@@ -361,6 +371,7 @@ export class RoomDurableObject {
           if (vote.type === 'like') likes++;
           else if (vote.type === 'dislike') dislikes++;
           else if (vote.type === 'superlike') superlikes++;
+          else if (vote.type === 'neutral') neutrals++;
         }
       });
 
@@ -371,6 +382,7 @@ export class RoomDurableObject {
         likes,
         dislikes,
         superlikes,
+        neutrals,
         netScore,
         votedBy: voters
       };

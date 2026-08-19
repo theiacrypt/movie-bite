@@ -31,8 +31,9 @@ export const Round1Suggestions: React.FC<Round1SuggestionsProps> = ({
 
   const isHost = room.hostId === currentPlayerId;
   const myMovies = room.movies.filter(m => m.suggestedBy?.id === currentPlayerId);
-  const maxLimit = room.settings.maxSuggestionsPerPlayer;
-  const canAddMore = myMovies.length < maxLimit;
+  const maxLimit = room.settings?.maxSuggestionsPerPlayer ?? 3;
+  const isUnlimited = maxLimit === 0;
+  const canAddMore = isUnlimited || myMovies.length < maxLimit;
   const canStartVoting = isHost && room.movies.length >= 2;
   const alreadyAddedIds = room.movies.map(m => m.id);
 
@@ -115,7 +116,13 @@ export const Round1Suggestions: React.FC<Round1SuggestionsProps> = ({
             }`}
           >
             <Plus className="w-4 h-4" />
-            <span>{canAddMore ? `Film suchen (${myMovies.length}/${maxLimit})` : `Limit (${maxLimit}/${maxLimit})`}</span>
+            <span>
+              {canAddMore
+                ? isUnlimited
+                  ? `Film suchen (${myMovies.length})`
+                  : `Film suchen (${myMovies.length}/${maxLimit})`
+                : `Limit (${maxLimit}/${maxLimit})`}
+            </span>
           </button>
 
           {/* Favorites button */}

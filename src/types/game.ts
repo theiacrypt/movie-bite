@@ -30,7 +30,7 @@ export interface Player {
   joinedAt: number;
 }
 
-export type VoteType = 'like' | 'dislike' | 'superlike';
+export type VoteType = 'like' | 'dislike' | 'superlike' | 'neutral';
 
 export interface UserVote {
   movieId: string;
@@ -40,7 +40,7 @@ export interface UserVote {
 export type GamePhase = 'LOBBY' | 'ROUND_1_SUGGEST' | 'ROUND_2_VOTE' | 'WINNER_SHOWDOWN';
 
 export interface RoomSettings {
-  maxSuggestionsPerPlayer: number;
+  maxSuggestionsPerPlayer: number; // 0 = unlimited / keine Grenze
   votingTimeLimitSeconds: number; // 0 for unlimited (host controls)
   allowDislikes: boolean;
   superVoteWeight: number;
@@ -51,6 +51,7 @@ export interface MovieScore {
   likes: number;
   dislikes: number;
   superlikes: number;
+  neutrals: number;
   netScore: number;
   votedBy: {
     playerName: string;

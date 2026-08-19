@@ -11,7 +11,7 @@ import { suppenstudiosAuth, Review, User } from '../services/suppenstudiosAuth.j
 import { tasteProfileService, WatchedMovieItem, UserTasteProfile } from '../services/tasteProfile.js';
 
 interface WelcomeScreenProps {
-  onCreateRoom: (name: string, avatar: string) => void;
+  onCreateRoom: (name: string, avatar: string, settings?: { maxSuggestionsPerPlayer: number }) => void;
   onJoinRoom: (code: string, name: string, avatar: string) => void;
   initialRoomCode?: string;
   error?: string | null;
@@ -33,8 +33,19 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onOpenReview
 }) => {
   const [tab, setTab] = useState<'create' | 'join'>(initialRoomCode ? 'join' : 'create');
-  const [name, setName] = useState('');
-  const [avatar, setAvatar] = useState('🍿');
+  const [name, setName] = useState(() => {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('movie_bite_player_name') || '';
+    }
+    return '';
+  });
+  const [avatar, setAvatar] = useState(() => {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('movie_bite_player_avatar') || '🍿';
+    }
+    return '🍿';
+  });
+  const [maxSuggestions, setMaxSuggestions] = useState<number>(3);
   const [roomCode, setRoomCode] = useState(initialRoomCode);
   const [currentUser, setCurrentUser] = useState<User | null>(suppenstudiosAuth.getUser());
   const [chefReviews, setChefReviews] = useState<Review[]>([]);
@@ -50,6 +61,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     const unsubAuth = suppenstudiosAuth.subscribe(user => {
       setCurrentUser(user);
       setMyFavCount(suppenstudiosAuth.getFavorites().length);
+      if (user && !name) {
+        setName(user.username);
+      }
     });
 
     const updateTaste = () => {
@@ -68,8 +82,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
   useEffect(() => {
     // Load Chef's reviews (graceful fallback)
-    suppenstudiosAuth.getUserReviews('Chef').then(res => {
-      setChefReviews((res.reviews || []).slice(0, 3));
+    suppenstudiosAuth.getUserReviews('chef').then(res => {
+      if (res.reviews && res.reviews.length > 0) {
+        setChefReviews(res.reviews.slice(0, 3));
+      } else {
+        suppenstudiosAuth.getUserReviews('SuppenChris').then(r2 => {
+          setChefReviews((r2.reviews || []).slice(0, 3));
+        });
+      }
     });
   }, []);
 
@@ -77,7 +97,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     e.preventDefault();
     soundFx.playPop();
     if (tab === 'create') {
-      onCreateRoom(name || 'Kino-Fan', avatar);
+      onCreateRoom(name || 'Kino-Fan', avatar, { maxSuggestionsPerPlayer: maxSuggestions });
     } else {
       if (!roomCode.trim()) return;
       onJoinRoom(roomCode.trim().toUpperCase(), name || 'Gast', avatar);
@@ -179,6 +199,39 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 className="w-full bg-theater-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cinema-red transition-all"
               />
             </div>
+
+            {/* Movie Suggestions Limit (for Host) */}
+            {tab === 'create' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span>Filme pro Spieler</span>
+                  <span className="text-[11px] text-cinema-red font-bold">
+                    {maxSuggestions === 0 ? 'Keine Grenze (Unbegrenzt)' : `Max. ${maxSuggestions} Filme`}
+                  </span>
+                </label>
+                <div className="grid grid-cols-4 gap-1.5 p-1 bg-theater-900/90 rounded-xl border border-white/10">
+                  {[
+                    { val: 1, label: '1 Film' },
+                    { val: 3, label: '3 (Std.)' },
+                    { val: 5, label: '5 Filme' },
+                    { val: 0, label: '∞ Keine' }
+                  ].map(opt => (
+                    <button
+                      key={opt.val}
+                      type="button"
+                      onClick={() => { soundFx.playPop(); setMaxSuggestions(opt.val); }}
+                      className={`py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
+                        maxSuggestions === opt.val
+                          ? 'bg-gradient-to-r from-cinema-red to-red-600 text-white shadow-md shadow-cinema-red/30'
+                          : 'text-slate-400 hover:text-white bg-theater-950/40 hover:bg-theater-850'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Room Code */}
             {tab === 'join' && (

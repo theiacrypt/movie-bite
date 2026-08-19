@@ -80,14 +80,14 @@ io.on('connection', (socket) => {
   let currentRoomCode: string | null = null;
   let currentPlayerId: string | null = null;
 
-  socket.on('create_room', (data: { name: string; avatar: string; code?: string }, callback) => {
-    const playerId = socket.id;
+  socket.on('create_room', (data: { name: string; avatar: string; code?: string; settings?: any; playerId?: string }, callback) => {
+    const playerId = data?.playerId || socket.id;
     currentPlayerId = playerId;
     const room = roomManager.createRoom({
       id: playerId,
       name: data.name,
       avatar: data.avatar
-    }, data?.code);
+    }, data?.code, data?.settings);
     currentRoomCode = room.code;
     socket.join(room.code);
     if (callback) callback({ success: true, room, playerId });
@@ -113,6 +113,17 @@ io.on('connection', (socket) => {
     socket.join(code);
     io.to(code).emit('room_updated', result);
     if (callback) callback({ success: true, room: result, playerId });
+  });
+
+  socket.on('update_settings', (settings: any, callback) => {
+    if (!currentRoomCode || !currentPlayerId) return;
+    const result = roomManager.updateSettings(currentRoomCode, currentPlayerId, settings);
+    if ('error' in result) {
+      if (callback) callback({ success: false, error: result.error });
+      return;
+    }
+    io.to(currentRoomCode).emit('room_updated', result);
+    if (callback) callback({ success: true, room: result });
   });
 
   socket.on('toggle_ready', () => {

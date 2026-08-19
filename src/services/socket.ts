@@ -50,12 +50,21 @@ export function generateRoomCode(): string {
   return code;
 }
 
-function getStoredPlayerId(): string {
-  if (typeof sessionStorage !== 'undefined') {
-    let pid = sessionStorage.getItem('movie_bite_player_id');
+export function getStoredPlayerId(): string {
+  if (typeof localStorage !== 'undefined') {
+    // Check if user is logged into Suppenstudios Account
+    try {
+      const userRaw = localStorage.getItem('suppenstudios_user');
+      if (userRaw) {
+        const parsed = JSON.parse(userRaw);
+        if (parsed?.id) return `user_${parsed.id}`;
+      }
+    } catch (_) {}
+
+    let pid = localStorage.getItem('movie_bite_player_id');
     if (!pid) {
       pid = `mb_${Math.random().toString(36).substring(2, 9)}`;
-      sessionStorage.setItem('movie_bite_player_id', pid);
+      localStorage.setItem('movie_bite_player_id', pid);
     }
     return pid;
   }

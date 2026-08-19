@@ -3,7 +3,7 @@ import { RoomState, Player, Movie, UserVote, MovieScore, GamePhase } from '../sr
 export class RoomManager {
   private rooms: Map<string, RoomState> = new Map();
 
-  createRoom(hostPlayer: { id: string; name: string; avatar: string }, forcedCode?: string): RoomState {
+  createRoom(hostPlayer: { id: string; name: string; avatar: string }, forcedCode?: string, customSettings?: Partial<RoomState['settings']>): RoomState {
     const code = (forcedCode || this.generateUniqueCode()).toUpperCase();
     const host: Player = {
       id: hostPlayer.id,
@@ -23,10 +23,11 @@ export class RoomManager {
       movies: [],
       votes: {},
       settings: {
-        maxSuggestionsPerPlayer: 3,
+        maxSuggestionsPerPlayer: typeof customSettings?.maxSuggestionsPerPlayer === 'number' ? customSettings.maxSuggestionsPerPlayer : 3,
         votingTimeLimitSeconds: 0,
-        allowDislikes: true,
-        superVoteWeight: 2
+        allowDislikes: customSettings?.allowDislikes ?? true,
+        superVoteWeight: 2,
+        ...customSettings
       },
       createdAt: Date.now()
     };
@@ -50,20 +51,24 @@ export class RoomManager {
       // Reconnect/update existing player
       room.players[existingPlayerIndex].name = player.name.trim() || room.players[existingPlayerIndex].name;
       room.players[existingPlayerIndex].avatar = player.avatar || room.players[existingPlayerIndex].avatar;
+      if (room.hostId === player.id) {
+        room.players[existingPlayerIndex].isHost = true;
+      }
       return room;
     }
 
+    const isFirstPlayer = room.players.length === 0 || room.hostId === player.id;
     const newPlayer: Player = {
       id: player.id,
       name: player.name.trim() || `Gast ${room.players.length + 1}`,
       avatar: player.avatar || '🎬',
-      isHost: room.players.length === 0,
-      isReady: false,
+      isHost: isFirstPlayer,
+      isReady: isFirstPlayer,
       hasFinishedVoting: false,
       joinedAt: Date.now()
     };
 
-    if (newPlayer.isHost) {
+    if (isFirstPlayer) {
       room.hostId = newPlayer.id;
     }
 
@@ -71,24 +76,23 @@ export class RoomManager {
     return room;
   }
 
+  updateSettings(code: string, playerId: string, newSettings: Partial<RoomState['settings']>): RoomState | { error: string } {
+    const room = this.getRoom(code);
+    if (!room) return { error: 'Raum nicht gefunden' };
+    if (room.hostId !== playerId) return { error: 'Nur der Host kann Einstellungen anpassen' };
+
+    room.settings = {
+      ...room.settings,
+      ...newSettings
+    };
+    return room;
+  }
+
   leaveRoom(code: string, playerId: string): RoomState | null {
     const room = this.getRoom(code);
     if (!room) return null;
 
-    room.players = room.players.filter(p => p.id !== playerId);
-
-    // If host left, assign new host if players left
-    if (room.hostId === playerId && room.players.length > 0) {
-      room.players[0].isHost = true;
-      room.hostId = room.players[0].id;
-    }
-
-    // Clean up empty rooms after 30 minutes
-    if (room.players.length === 0) {
-      this.rooms.delete(room.code);
-      return null;
-    }
-
+    // Do not immediately delete player to protect from temporary reload / network glitches
     return room;
   }
 
@@ -126,9 +130,10 @@ export class RoomManager {
     const player = room.players.find(p => p.id === playerId);
     if (!player) return { error: 'Spieler nicht im Raum' };
 
+    const maxLimit = room.settings.maxSuggestionsPerPlayer;
     const playerMovies = room.movies.filter(m => m.suggestedBy?.id === playerId);
-    if (playerMovies.length >= room.settings.maxSuggestionsPerPlayer) {
-      return { error: `Maximal ${room.settings.maxSuggestionsPerPlayer} Vorschläge pro Spieler erlaubt.` };
+    if (maxLimit > 0 && playerMovies.length >= maxLimit) {
+      return { error: `Maximal ${maxLimit} Vorschläge pro Spieler erlaubt.` };
     }
 
     // Check if already in list
@@ -191,6 +196,7 @@ export class RoomManager {
       let likes = 0;
       let dislikes = 0;
       let superlikes = 0;
+      let neutrals = 0;
       const voters: { playerName: string; playerAvatar: string; type: any }[] = [];
 
       Object.entries(room.votes).forEach(([voterId, userVotes]) => {
@@ -206,10 +212,11 @@ export class RoomManager {
           if (vote.type === 'like') likes++;
           else if (vote.type === 'dislike') dislikes++;
           else if (vote.type === 'superlike') superlikes++;
+          else if (vote.type === 'neutral') neutrals++;
         }
       });
 
-      // Superlikes count as 2, Likes as 1, Dislikes as -1
+      // Superlikes count as 2, Likes as 1, Dislikes as -1, Neutrals as 0
       const netScore = (likes * 1) + (superlikes * room.settings.superVoteWeight) - (dislikes * 1);
 
       return {
@@ -217,6 +224,7 @@ export class RoomManager {
         likes,
         dislikes,
         superlikes,
+        neutrals,
         netScore,
         votedBy: voters
       };
@@ -245,7 +253,7 @@ export class RoomManager {
     room.results = undefined;
     room.winner = undefined;
     room.players.forEach(p => {
-      p.isReady = false;
+      p.isReady = p.isHost;
       p.hasFinishedVoting = false;
     });
 

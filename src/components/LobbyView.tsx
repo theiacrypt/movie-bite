@@ -1,7 +1,9 @@
-import React from 'react';
-import { Users, Crown, CheckCircle, Clock, Play, Share2, Sparkles, Shield } from 'lucide-react';
-import { RoomState, Player } from '../types/game.js';
+import React, { useState } from 'react';
+import { Users, Crown, CheckCircle, Clock, Play, Share2, Sparkles, Shield, Bell, BellRing, Sliders, LogIn } from 'lucide-react';
+import { RoomState, RoomSettings } from '../types/game.js';
 import { soundFx } from '../services/soundEffects.js';
+import { notificationService } from '../services/notificationService.js';
+import { suppenstudiosAuth } from '../services/suppenstudiosAuth.js';
 
 interface LobbyViewProps {
   room: RoomState;
@@ -9,6 +11,8 @@ interface LobbyViewProps {
   onToggleReady: () => void;
   onStartRound1: () => void;
   onOpenShare: () => void;
+  onUpdateSettings?: (settings: Partial<RoomSettings>) => void;
+  onOpenAuth?: () => void;
 }
 
 export const LobbyView: React.FC<LobbyViewProps> = ({
@@ -16,12 +20,36 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   currentPlayerId,
   onToggleReady,
   onStartRound1,
-  onOpenShare
+  onOpenShare,
+  onUpdateSettings,
+  onOpenAuth
 }) => {
   const isHost = room.hostId === currentPlayerId;
   const me = room.players.find(p => p.id === currentPlayerId);
   const readyCount = room.players.filter(p => p.isReady).length;
   const canStart = isHost && room.players.length >= 1;
+  const currentUser = suppenstudiosAuth.getUser();
+
+  const [notifGranted, setNotifGranted] = useState(() => notificationService.isGranted());
+  const [showSettings, setShowSettings] = useState(false);
+
+  const maxLimit = room.settings?.maxSuggestionsPerPlayer ?? 3;
+
+  const handleEnableNotifications = async () => {
+    soundFx.playPop();
+    const granted = await notificationService.requestPermission();
+    setNotifGranted(granted);
+    if (granted) {
+      notificationService.send('🍿 Movie-Bite Benachrichtigungen aktiv!', {
+        body: 'Du wirst informiert, sobald die nächste Runde startet.'
+      });
+    }
+  };
+
+  const handleSetMaxSuggestions = (limit: number) => {
+    soundFx.playPop();
+    onUpdateSettings?.({ maxSuggestionsPerPlayer: limit });
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
@@ -45,7 +73,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             </p>
           </div>
 
-          {/* Quick Share Box */}
+          {/* Quick Share Box & Actions */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={onOpenShare}
@@ -86,6 +114,94 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Guest Notification Prompt Banner */}
+      {!notifGranted && notificationService.isSupported() && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-500/15 via-theater-900 to-theater-950 border border-amber-500/30 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-slideUp">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 animate-bounce">
+              <Bell className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-white flex items-center gap-2">
+                <span>Runden-Benachrichtigungen aktivieren</span>
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold uppercase">Empfohlen</span>
+              </h4>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Erhalte direkt eine Info, wenn der Host die nächste Runde oder das Voting startet – auch im Hintergrund!
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleEnableNotifications}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-theater-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all shrink-0 active:scale-95"
+          >
+            <BellRing className="w-4 h-4" />
+            <span>Benachrichtigung erlauben</span>
+          </button>
+        </div>
+      )}
+
+      {/* Host Settings Bar */}
+      {isHost && (
+        <div className="glass-panel rounded-3xl p-5 border border-cinema-gold/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-cinema-gold">
+              <Sliders className="w-4 h-4" />
+              <h4 className="font-bold text-xs sm:text-sm text-white">Raum-Einstellungen (Host)</h4>
+            </div>
+            <span className="text-[11px] text-cinema-gold font-bold">
+              {maxLimit === 0 ? 'Limit: Keine Grenze (∞)' : `Limit: Max. ${maxLimit} Filme pro Spieler`}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">
+                Vorschlagslimit pro Teilnehmer
+              </label>
+              <div className="grid grid-cols-5 gap-1 p-1 bg-theater-900 rounded-xl border border-white/5">
+                {[
+                  { val: 1, label: '1 Film' },
+                  { val: 2, label: '2' },
+                  { val: 3, label: '3 (Std)' },
+                  { val: 5, label: '5' },
+                  { val: 0, label: '∞ Keine' }
+                ].map(opt => (
+                  <button
+                    key={opt.val}
+                    onClick={() => handleSetMaxSuggestions(opt.val)}
+                    className={`py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
+                      maxLimit === opt.val
+                        ? 'bg-gradient-to-r from-cinema-red to-red-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white bg-theater-950/40 hover:bg-theater-850'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Suppenstudios Account Info */}
+            {!currentUser && onOpenAuth && (
+              <div className="p-2.5 rounded-xl bg-theater-900/60 border border-white/5 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white truncate">Suppenstudios Account</p>
+                  <p className="text-[10px] text-slate-400">Favoriten synchronisieren & Rezensionen teilen</p>
+                </div>
+                <button
+                  onClick={onOpenAuth}
+                  className="px-3 py-1.5 rounded-lg bg-cinema-red/20 text-red-300 hover:bg-cinema-red hover:text-white border border-cinema-red/30 text-xs font-bold flex items-center gap-1 transition-all shrink-0"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Anmelden</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Players List Grid */}
       <div className="glass-panel rounded-3xl p-6 border border-white/10">
@@ -141,11 +257,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
                 <div className="shrink-0">
                   {player.isReady ? (
-                    <span className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center gap-1 text-xs font-semibold">
+                    <span className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center gap-1 text-xs font-semibold" title="Bereit">
                       <CheckCircle className="w-4 h-4" />
                     </span>
                   ) : (
-                    <span className="p-1.5 rounded-xl bg-slate-800 text-slate-500 flex items-center gap-1 text-xs">
+                    <span className="p-1.5 rounded-xl bg-slate-800 text-slate-500 flex items-center gap-1 text-xs" title="Wartet">
                       <Clock className="w-4 h-4" />
                     </span>
                   )}
@@ -165,7 +281,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           <div>
             <h4 className="font-bold text-sm text-white">Runde 1: Filme vorschlagen</h4>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Jeder darf bis zu 3 Wunschfilme über unsere Film-Suche vorschlagen. Poster, Genre und Filminfos werden automatisch geladen.
+              {maxLimit === 0
+                ? 'Jeder darf beliebig viele Wunschfilme über unsere Film-Suche oder aus den Favoriten vorschlagen.'
+                : `Jeder darf bis zu ${maxLimit} Wunschfilme über unsere Film-Suche oder aus den Favoriten vorschlagen.`}
             </p>
           </div>
         </div>
@@ -175,9 +293,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             <Shield className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="font-bold text-sm text-white">Runde 2: Voting mit Likes & Dislikes</h4>
+            <h4 className="font-bold text-sm text-white">Runde 2: Voting & Auswertung</h4>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Alle stimmen über die Vorschläge ab. Mit Likes, Dislikes und deinem persönlichen Super-Vote (+2) kürt ihr den finalen Sieger!
+              Stimme mit Like (+1), Neutral (0), Dislike (-1) oder Super-Vote (+2) ab. Vor dem Absenden überprüfst du alles in der Zusammenfassung!
             </p>
           </div>
         </div>
@@ -185,3 +303,4 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     </div>
   );
 };
+

@@ -1,148 +1,132 @@
 import React, { useEffect, useState } from 'react';
+import { Trophy, Star, Heart, ThumbsDown, Sparkles, RotateCcw, ExternalLink, Play, Film, MessageSquare, Medal, MinusCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { Trophy, Crown, Star, Heart, ThumbsDown, RotateCcw, Play, Film, ExternalLink, Sparkles, Medal, MessageSquare } from 'lucide-react';
-import { RoomState, MovieScore, Movie } from '../types/game.js';
-import { MovieDetailModal } from './MovieDetailModal.js';
+import { MovieScore, Movie } from '../types/game.js';
 import { soundFx } from '../services/soundEffects.js';
 import { suppenstudiosAuth } from '../services/suppenstudiosAuth.js';
-import { tasteProfileService } from '../services/tasteProfile.js';
+import { MovieDetailModal } from './MovieDetailModal.js';
 
 interface WinnerShowdownProps {
-  room: RoomState;
-  currentPlayerId: string;
+  results: MovieScore[];
+  isHost: boolean;
   onRestartGame: () => void;
   onOpenReview?: (movie: Movie) => void;
 }
 
 export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
-  room,
-  currentPlayerId,
+  results,
+  isHost,
   onRestartGame,
   onOpenReview
 }) => {
+  const winner = results[0];
   const [winnerFaved, setWinnerFaved] = useState(false);
-  const isHost = room.hostId === currentPlayerId;
-  const winner = room.winner;
-  const results = room.results || [];
   const [selectedDetailMovie, setSelectedDetailMovie] = useState<any>(null);
 
   useEffect(() => {
-    soundFx.playFanfare();
-
-    if (winner?.movie) {
-      tasteProfileService.recordWatchedMovie(winner.movie, room.code);
+    soundFx.playWinner();
+    // Burst confetti celebration
+    try {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 }
+        });
+        confetti({
+          particleCount: 50,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 }
+        });
+      }, 350);
+    } catch {
+      // Ignore if canvas-confetti is not loaded
     }
-
-    // Trigger celebratory confetti cannon
-    const duration = 3.5 * 1000;
-    const end = Date.now() + duration;
-
-    const frame = () => {
-      confetti({
-        particleCount: 4,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0, y: 0.7 },
-        colors: ['#e50914', '#f5c518', '#8b5cf6', '#ffffff']
-      });
-      confetti({
-        particleCount: 4,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1, y: 0.7 },
-        colors: ['#e50914', '#f5c518', '#8b5cf6', '#ffffff']
-      });
-
-      if (Date.now() < end) {
-        requestAnimationFrame(frame);
-      }
-    };
-    frame();
   }, []);
 
   if (!winner) {
     return (
-      <div className="max-w-4xl mx-auto p-12 text-center text-slate-400">
-        <Film className="w-12 h-12 mx-auto text-slate-600 mb-2 animate-spin" />
-        <p>Ergebnisse werden geladen...</p>
+      <div className="max-w-md mx-auto p-8 text-center text-slate-400">
+        Keine Ergebnisse verfügbar.
       </div>
     );
   }
 
-  const trailerSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(winner.movie.title + ' ' + winner.movie.year + ' trailer deutsch')}`;
-  const justWatchUrl = `https://www.justwatch.com/de/suche?q=${encodeURIComponent(winner.movie.title)}`;
+  const trailerSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${winner.movie.title} ${winner.movie.year} trailer deutsch`)}`;
+  const justWatchUrl = `https://www.justwatch.com/de/Suche?q=${encodeURIComponent(winner.movie.title)}`;
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-8 animate-in fade-in zoom-in-95 duration-500">
-      {/* Grand Winner Showcase */}
-      <div className="glass-panel rounded-3xl overflow-hidden border-2 border-cinema-gold/40 shadow-2xl relative glow-gold">
-        {/* Top Gold Ribbon */}
-        <div className="bg-gradient-to-r from-cinema-gold via-yellow-400 to-amber-500 py-2.5 px-4 text-center font-display font-black text-xs sm:text-sm text-theater-950 uppercase tracking-widest flex items-center justify-center gap-2 shadow-md">
-          <Trophy className="w-4 h-4 fill-theater-950" />
-          <span>Der Gewinner des Abends steht fest!</span>
-          <Trophy className="w-4 h-4 fill-theater-950" />
-        </div>
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-8 animate-in fade-in zoom-in-95 duration-500">
+      {/* ─── Winner Showcase Card ─────────────────── */}
+      <div className="glass-panel glass-winner rounded-3xl p-6 sm:p-8 border border-cinema-gold/30 shadow-2xl relative overflow-hidden">
+        {/* Glow backdrop */}
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-cinema-gold/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="grid grid-cols-1 md:grid-cols-12">
+        <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
           {/* Winner Poster */}
-          <div className="md:col-span-5 relative h-80 sm:h-96 md:h-full min-h-[360px] bg-theater-950 overflow-hidden">
+          <div className="relative shrink-0 w-48 sm:w-56 rounded-2xl overflow-hidden shadow-2xl border-2 border-cinema-gold/40">
             <img
               src={winner.movie.poster}
               alt={winner.movie.title}
-              className="w-full h-full object-cover"
+              className="w-full h-72 sm:h-80 object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-theater-950 via-transparent to-transparent md:hidden" />
-
-            <div className="absolute top-4 left-4 p-3 rounded-2xl bg-theater-950/80 backdrop-blur-md border border-cinema-gold/40 text-cinema-gold shadow-xl flex items-center gap-2">
-              <Crown className="w-6 h-6 fill-cinema-gold" />
-              <span className="font-display font-black text-sm uppercase tracking-wider">Platz 1</span>
+            <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-cinema-gold text-theater-950 px-3 py-1 rounded-xl text-xs font-black shadow-lg">
+              <Trophy className="w-3.5 h-3.5 fill-theater-950" />
+              <span>GEWINNER</span>
             </div>
           </div>
 
-          {/* Winner Content & Voting Breakdown */}
-          <div className="md:col-span-7 p-6 sm:p-8 flex flex-col justify-between space-y-6">
+          {/* Winner Details */}
+          <div className="flex-1 text-center md:text-left space-y-4">
             <div>
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="text-xs font-bold text-cinema-gold bg-theater-900 px-2.5 py-0.5 rounded-lg border border-cinema-gold/20 flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 fill-cinema-gold" />
-                  {winner.movie.rating}
-                </span>
-                <span className="text-xs font-semibold text-slate-300 bg-theater-900 px-2.5 py-0.5 rounded-lg">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cinema-gold/15 border border-cinema-gold/30 text-yellow-300 text-xs font-bold uppercase tracking-wider mb-2">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Filmabend-Wahl entschieden</span>
+              </div>
+              <h2 className="font-display font-black text-3xl sm:text-4xl text-white tracking-tight">
+                {winner.movie.title}
+              </h2>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
+                <span className="text-xs font-semibold text-slate-400 bg-theater-900 px-2.5 py-1 rounded-lg">
                   {winner.movie.year}
                 </span>
+                <span className="flex items-center gap-1 text-xs font-bold text-cinema-gold bg-theater-900 px-2.5 py-1 rounded-lg">
+                  <Star className="w-3.5 h-3.5 fill-cinema-gold" />
+                  <span>{winner.movie.rating}</span>
+                </span>
+                {winner.movie.runtime && (
+                  <span className="text-xs text-slate-400 bg-theater-900 px-2.5 py-1 rounded-lg">
+                    {winner.movie.runtime}
+                  </span>
+                )}
                 {winner.movie.genre.map((g) => (
-                  <span key={g} className="text-xs bg-theater-900 text-slate-300 px-2.5 py-0.5 rounded-lg">
+                  <span key={g} className="text-xs bg-theater-900 text-slate-300 px-2.5 py-1 rounded-lg">
                     {g}
                   </span>
                 ))}
               </div>
-
-              <h2 className="font-display font-black text-3xl sm:text-4xl text-white tracking-tight leading-tight">
-                {winner.movie.title}
-              </h2>
-
-              <p className="text-sm text-slate-300 mt-4 leading-relaxed line-clamp-4 bg-theater-900/50 p-4 rounded-2xl border border-white/5">
-                {winner.movie.plot}
-              </p>
-
-              {winner.movie.suggestedBy && (
-                <p className="text-xs text-slate-400 mt-3 flex items-center gap-1.5">
-                  <span className="text-base">{winner.movie.suggestedBy.avatar}</span>
-                  <span>Erfolgreich vorgeschlagen von <strong className="text-white">{winner.movie.suggestedBy.name}</strong></span>
-                </p>
-              )}
             </div>
 
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed line-clamp-3 bg-theater-900/40 p-4 rounded-2xl border border-white/5">
+              {winner.movie.plot}
+            </p>
+
             {/* Score Breakdown Pills */}
-            <div className="p-4 rounded-2xl bg-theater-900/80 border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Ergebnis-Auswertung</span>
-                <span className="text-base font-black text-cinema-gold font-mono">
+            <div className="p-4 rounded-2xl bg-theater-950/60 border border-white/5 space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
+                <span>Ergebnis-Punkte</span>
+                <span className="text-base font-black font-mono text-cinema-gold">
                   {winner.netScore > 0 ? `+${winner.netScore}` : winner.netScore} Punkte
                 </span>
               </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-4 gap-2 text-center">
                 <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                   <div className="flex items-center justify-center gap-1 text-emerald-400 text-xs font-bold">
                     <Heart className="w-3.5 h-3.5 fill-emerald-400" />
@@ -156,7 +140,15 @@ export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
                     <Star className="w-3.5 h-3.5 fill-yellow-400" />
                     <span>{winner.superlikes}</span>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-medium">Super-Votes (+2)</span>
+                  <span className="text-[10px] text-slate-400 font-medium">Super (+2)</span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-500/10 border border-slate-500/20">
+                  <div className="flex items-center justify-center gap-1 text-slate-300 text-xs font-bold">
+                    <MinusCircle className="w-3.5 h-3.5" />
+                    <span>{winner.neutrals || 0}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium">Neutral (0)</span>
                 </div>
 
                 <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
@@ -254,10 +246,14 @@ export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
                   <img
                     src={item.movie.poster}
                     alt={item.movie.title}
-                    className="w-12 h-16 object-cover rounded-lg shrink-0 shadow-md bg-theater-950"
+                    className="w-12 h-16 object-cover rounded-lg shrink-0 shadow-md bg-theater-950 cursor-pointer"
+                    onClick={() => setSelectedDetailMovie(item.movie)}
                   />
                   <div className="min-w-0">
-                    <h4 className="font-display font-bold text-sm sm:text-base text-white truncate">
+                    <h4
+                      onClick={() => setSelectedDetailMovie(item.movie)}
+                      className="font-display font-bold text-sm sm:text-base text-white hover:text-cinema-red cursor-pointer truncate transition-colors"
+                    >
                       {item.movie.title}
                     </h4>
                     <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
@@ -273,13 +269,16 @@ export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
 
                 <div className="flex items-center gap-4 shrink-0 sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-white/5">
                   <div className="flex items-center gap-3 text-xs">
-                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                    <span className="text-emerald-400 font-semibold flex items-center gap-1" title="Likes">
                       <Heart className="w-3.5 h-3.5 fill-emerald-400" /> {item.likes}
                     </span>
-                    <span className="text-yellow-400 font-semibold flex items-center gap-1">
+                    <span className="text-yellow-400 font-semibold flex items-center gap-1" title="Super-Votes">
                       <Star className="w-3.5 h-3.5 fill-yellow-400" /> {item.superlikes}
                     </span>
-                    <span className="text-red-400 font-semibold flex items-center gap-1">
+                    <span className="text-slate-300 font-semibold flex items-center gap-1" title="Neutrale Stimmen">
+                      <MinusCircle className="w-3.5 h-3.5" /> {item.neutrals || 0}
+                    </span>
+                    <span className="text-red-400 font-semibold flex items-center gap-1" title="Dislikes">
                       <ThumbsDown className="w-3.5 h-3.5" /> {item.dislikes}
                     </span>
                   </div>

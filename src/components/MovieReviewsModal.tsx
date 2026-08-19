@@ -22,7 +22,7 @@ import {
   Palette,
   Compass
 } from 'lucide-react';
-import { suppenstudiosAuth, Review, User } from '../services/suppenstudiosAuth.js';
+import { suppenstudiosAuth, Review, User, isChefUser } from '../services/suppenstudiosAuth.js';
 import { tasteProfileService, REVIEW_CATEGORIES, ReviewCategoryOption } from '../services/tasteProfile.js';
 
 interface MovieReviewsModalProps {
@@ -34,13 +34,7 @@ interface MovieReviewsModalProps {
   onOpenAuth?: () => void;
 }
 
-function isChef(item?: string | { username?: string; role?: string }): boolean {
-  if (!item) return false;
-  if (typeof item === 'string') {
-    return item.toLowerCase() === 'chef';
-  }
-  return item.role === 'chef' || item.username?.toLowerCase() === 'chef';
-}
+const isChef = isChefUser;
 
 interface ReviewWithLocal extends Review {
   _helpfulLocal?: boolean;

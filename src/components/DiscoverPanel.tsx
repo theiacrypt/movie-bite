@@ -4,7 +4,7 @@ import {
   X, Loader2, Clapperboard, Sparkles, Crown, TrendingUp,
   BookOpen, MessageSquare
 } from 'lucide-react';
-import { suppenstudiosAuth, UserSearchResult, FavoriteMovie, User } from '../services/suppenstudiosAuth.js';
+import { suppenstudiosAuth, UserSearchResult, FavoriteMovie, User, isChefUser } from '../services/suppenstudiosAuth.js';
 import { searchMoviesUniversal } from '../services/movieSearch.js';
 import { tasteProfileService } from '../services/tasteProfile.js';
 import { soundFx } from '../services/soundEffects.js';
@@ -27,8 +27,6 @@ interface DiscoverPanelProps {
 type SearchTab = 'movies' | 'users';
 
 const QUICK_SEARCHES = ['Action', 'Horror', 'Romantik', 'Sci-Fi', 'Anime', 'Thriller'];
-
-const CHEF_USERNAME = 'Chef';
 
 export const DiscoverPanel: React.FC<DiscoverPanelProps> = ({ onOpenAuth, onOpenReview }) => {
   const [tab, setTab] = useState<SearchTab>('movies');
@@ -327,7 +325,7 @@ export const DiscoverPanel: React.FC<DiscoverPanelProps> = ({ onOpenAuth, onOpen
               </p>
               <div className="space-y-2">
                 {userResults.map(user => {
-                  const isChef = (user as any).role === 'chef' || user.username.toLowerCase() === CHEF_USERNAME.toLowerCase();
+                  const isChef = isChefUser(user);
                   const following = suppenstudiosAuth.isFollowing(user.username);
                   return (
                     <div

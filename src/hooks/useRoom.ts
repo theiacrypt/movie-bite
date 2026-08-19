@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSocket } from '../services/socket.js';
-import { RoomState, UserVote } from '../types/game.js';
+import { getSocket, getStoredPlayerId } from '../services/socket.js';
+import { RoomState, UserVote, RoomSettings } from '../types/game.js';
 
 export function useRoom() {
   const [room, setRoom] = useState<RoomState | null>(null);
-  const [playerId, setPlayerId] = useState<string>('');
+  const [playerId, setPlayerId] = useState<string>(() => getStoredPlayerId());
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -28,6 +28,9 @@ export function useRoom() {
     const handleRoomUpdated = (updatedRoom: RoomState) => {
       setRoom(updatedRoom);
       setError(null);
+      if (typeof localStorage !== 'undefined' && updatedRoom?.code) {
+        localStorage.setItem('movie_bite_active_room', updatedRoom.code);
+      }
     };
 
     socket.on('connect', onConnect);
@@ -38,6 +41,36 @@ export function useRoom() {
       socket.connect();
     }
 
+    // Auto-reconnect if active room was stored in localStorage or URL
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlCode = urlParams.get('room')?.toUpperCase().trim();
+      const savedCode = localStorage.getItem('movie_bite_active_room')?.toUpperCase().trim();
+      const codeToJoin = urlCode || savedCode;
+
+      const savedName = localStorage.getItem('movie_bite_player_name') || 'Gast';
+      const savedAvatar = localStorage.getItem('movie_bite_player_avatar') || '🍿';
+
+      if (codeToJoin && !room) {
+        console.log(`🔄 [useRoom] Automatische Wiederverbindung zu Raum [${codeToJoin}]...`);
+        socket.emit('join_room', {
+          code: codeToJoin,
+          name: savedName,
+          avatar: savedAvatar,
+          playerId: getStoredPlayerId()
+        }, (res: any) => {
+          if (res && res.success) {
+            setRoom(res.room);
+            setPlayerId(res.playerId);
+            localStorage.setItem('movie_bite_active_room', res.room.code);
+          } else {
+            // Room might be expired or not found
+            localStorage.removeItem('movie_bite_active_room');
+          }
+        });
+      }
+    }
+
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
@@ -45,8 +78,8 @@ export function useRoom() {
     };
   }, []);
 
-  const createRoom = useCallback((name: string, avatar: string) => {
-    console.log(`🎬 [useRoom] createRoom aufgerufen: Name="${name}", Avatar="${avatar}"`);
+  const createRoom = useCallback((name: string, avatar: string, settings?: Partial<RoomSettings>) => {
+    console.log(`🎬 [useRoom] createRoom aufgerufen: Name="${name}", Avatar="${avatar}"`, settings);
     setLoading(true);
     setError(null);
     const socket = socketRef.current;
@@ -59,13 +92,18 @@ export function useRoom() {
         setError('Server antwortet nicht. Bitte stelle sicher, dass der Server läuft.');
       }, 6000);
 
-      socket.emit('create_room', { name, avatar }, (res: any) => {
+      socket.emit('create_room', { name, avatar, settings }, (res: any) => {
         clearTimeout(timeout);
         setLoading(false);
         console.log('📦 [useRoom] Antwort auf create_room:', res);
         if (res && res.success) {
           setRoom(res.room);
           setPlayerId(res.playerId);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('movie_bite_active_room', res.room.code);
+            localStorage.setItem('movie_bite_player_name', name);
+            localStorage.setItem('movie_bite_player_avatar', avatar);
+          }
         } else {
           setError(res?.error || 'Fehler beim Erstellen des Raumes');
         }
@@ -98,13 +136,18 @@ export function useRoom() {
         setError('Server antwortet nicht. Bitte überprüfe den Raumcode oder deine Verbindung.');
       }, 6000);
 
-      socket.emit('join_room', { code: cleanCode, name, avatar }, (res: any) => {
+      socket.emit('join_room', { code: cleanCode, name, avatar, playerId: getStoredPlayerId() }, (res: any) => {
         clearTimeout(timeout);
         setLoading(false);
         console.log(`📦 [useRoom] Antwort auf join_room [${cleanCode}]:`, res);
         if (res && res.success) {
           setRoom(res.room);
           setPlayerId(res.playerId);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('movie_bite_active_room', res.room.code);
+            localStorage.setItem('movie_bite_player_name', name);
+            localStorage.setItem('movie_bite_player_avatar', avatar);
+          }
         } else {
           setError(res?.error || 'Raum nicht gefunden');
         }
@@ -120,6 +163,15 @@ export function useRoom() {
     } else {
       performJoin();
     }
+  }, []);
+
+  const updateSettings = useCallback((settings: Partial<RoomSettings>) => {
+    const socket = socketRef.current;
+    socket.emit('update_settings', settings, (res: any) => {
+      if (res && !res.success && res.error) {
+        alert(res.error);
+      }
+    });
   }, []);
 
   const toggleReady = useCallback(() => {
@@ -156,6 +208,18 @@ export function useRoom() {
     socket.emit('restart_game');
   }, []);
 
+  const leaveRoom = useCallback(() => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('movie_bite_active_room');
+    }
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('room');
+      window.history.replaceState({}, '', url.toString());
+    }
+    setRoom(null);
+  }, []);
+
   return {
     room,
     playerId,
@@ -164,11 +228,13 @@ export function useRoom() {
     isConnected,
     createRoom,
     joinRoom,
+    updateSettings,
     toggleReady,
     startPhase,
     addMovie,
     removeMovie,
     submitVotes,
-    restartGame
+    restartGame,
+    leaveRoom
   };
 }
