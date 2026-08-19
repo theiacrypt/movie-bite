@@ -11,6 +11,7 @@ import { MovieReviewsModal } from './components/MovieReviewsModal.js';
 import { FavoritesModal } from './components/FavoritesModal.js';
 import { Movie } from './types/game.js';
 import { useRoom } from './hooks/useRoom.js';
+import { suppenstudiosAuth } from './services/suppenstudiosAuth.js';
 
 import { LegalModal } from './components/LegalModal.js';
 

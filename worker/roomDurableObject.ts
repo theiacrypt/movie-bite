@@ -13,6 +13,22 @@ export class RoomDurableObject {
 
   constructor(state: DurableObjectState, env: any) {
     this.state = state;
+    this.state.blockConcurrencyWhile(async () => {
+      try {
+        const stored = await this.state.storage.get<RoomState>('room');
+        if (stored) {
+          this.room = stored;
+        }
+      } catch (_) {}
+    });
+  }
+
+  private async saveRoom() {
+    try {
+      if (this.room) {
+        await this.state.storage.put('room', this.room);
+      }
+    } catch (_) {}
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -20,7 +36,7 @@ export class RoomDurableObject {
 
     // If HTTP GET /room - return current state as JSON
     if (request.headers.get('Upgrade') !== 'websocket') {
-      return new Response(JSON.stringify(this.room || { error: 'Raum nicht initialisiert' }), {
+      return new Response(JSON.stringify(this.room || { error: 'Raum nicht gefunden' }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
@@ -92,6 +108,7 @@ export class RoomDurableObject {
         client.avatar = avatar;
 
         const code = (data?.code || this.generateRoomCode()).toUpperCase();
+        console.log(`[DO] create_room: Code="${code}", Host="${name}" (PlayerId="${client.playerId}")`);
         const host: Player = {
           id: client.playerId,
           name,
@@ -118,6 +135,8 @@ export class RoomDurableObject {
           createdAt: Date.now()
         };
 
+        await this.saveRoom();
+        console.log(`[DO] Raum [${code}] erfolgreich initialisiert mit Host: ${host.name}`);
         sendResponse({ success: true, room: this.room, playerId: client.playerId });
         this.broadcastRoom();
         break;
@@ -132,7 +151,10 @@ export class RoomDurableObject {
         client.name = name;
         client.avatar = avatar;
 
+        console.log(`[DO] join_room: Ziel-Code="${code}", Spieler="${name}" (ID="${targetPlayerId}"), Raum existiert? ${!!this.room} (Aktueller Raum-Code: ${this.room?.code || 'NULL'})`);
+
         if (!this.room) {
+          console.warn(`[DO] FEHLER: Raum nicht gefunden für Code="${code}". this.room ist null in dieser DO-Instanz!`);
           sendResponse({ success: false, error: 'Raum nicht gefunden' });
           return;
         }
@@ -141,6 +163,7 @@ export class RoomDurableObject {
         if (existingPlayer) {
           existingPlayer.name = name || existingPlayer.name;
           existingPlayer.avatar = avatar || existingPlayer.avatar;
+          console.log(`[DO] Spieler ${name} (${targetPlayerId}) wiederverbunden.`);
         } else {
           const newPlayer: Player = {
             id: targetPlayerId,
@@ -157,8 +180,10 @@ export class RoomDurableObject {
           }
 
           this.room.players.push(newPlayer);
+          console.log(`[DO] Neuer Spieler beigetreten: ${newPlayer.name} (${newPlayer.id}). Spieleranzahl nun: ${this.room.players.length}`);
         }
 
+        await this.saveRoom();
         sendResponse({ success: true, room: this.room, playerId: targetPlayerId });
         this.broadcastRoom();
         break;
@@ -169,6 +194,7 @@ export class RoomDurableObject {
         const player = this.room.players.find(p => p.id === client.playerId);
         if (player) {
           player.isReady = !player.isReady;
+          await this.saveRoom();
           this.broadcastRoom();
         }
         break;
@@ -185,6 +211,7 @@ export class RoomDurableObject {
           this.calculateResults();
         }
 
+        await this.saveRoom();
         this.broadcastRoom();
         break;
       }
@@ -223,6 +250,7 @@ export class RoomDurableObject {
         };
 
         this.room.movies.push(movieWithAuthor);
+        await this.saveRoom();
         sendResponse({ success: true, room: this.room });
         this.broadcastRoom();
         break;
@@ -239,6 +267,7 @@ export class RoomDurableObject {
 
         if (isHost || isOwner) {
           this.room.movies = this.room.movies.filter(m => m.id !== movieId);
+          await this.saveRoom();
           this.broadcastRoom();
         }
         break;
@@ -260,6 +289,7 @@ export class RoomDurableObject {
           this.calculateResults();
         }
 
+        await this.saveRoom();
         sendResponse({ success: true });
         this.broadcastRoom();
         break;
@@ -277,17 +307,22 @@ export class RoomDurableObject {
           p.hasFinishedVoting = false;
         });
 
+        await this.saveRoom();
         this.broadcastRoom();
         break;
       }
     }
   }
 
-  private handleClose(ws: WebSocket) {
+  private async handleClose(ws: WebSocket) {
     const client = this.sockets.get(ws);
     this.sockets.delete(ws);
 
     if (!client || !this.room) return;
+
+    // Check if client has another open connection (e.g. reconnecting)
+    const hasOtherSocket = Array.from(this.sockets.values()).some(c => c.playerId === client.playerId);
+    if (hasOtherSocket) return;
 
     // Remove player
     this.room.players = this.room.players.filter(p => p.id !== client.playerId);
@@ -296,6 +331,8 @@ export class RoomDurableObject {
       this.room.players[0].isHost = true;
       this.room.hostId = this.room.players[0].id;
     }
+
+    await this.saveRoom();
 
     if (this.room.players.length > 0) {
       this.broadcastRoom();

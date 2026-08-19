@@ -84,13 +84,16 @@ export default {
     // WebSocket / Real-time Gateway
     if (url.pathname === '/ws' || url.pathname.startsWith('/socket.io') || request.headers.get('Upgrade') === 'websocket') {
       let code = url.searchParams.get('code') || '';
+      const playerId = url.searchParams.get('playerId') || '(none)';
       
       // If no code provided yet (e.g. creating room or initial handshake)
       if (!code) {
         code = `TEMP_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       }
 
-      const id = env.MOVIE_ROOM.idFromName(code.toUpperCase());
+      const cleanCode = code.toUpperCase().trim();
+      console.log(`[Worker] WS Verbindung -> Code: ${cleanCode}, PlayerId: ${playerId}`);
+      const id = env.MOVIE_ROOM.idFromName(cleanCode);
       const stub = env.MOVIE_ROOM.get(id);
       return stub.fetch(request);
     }

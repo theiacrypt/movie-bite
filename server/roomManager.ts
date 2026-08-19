@@ -3,8 +3,8 @@ import { RoomState, Player, Movie, UserVote, MovieScore, GamePhase } from '../sr
 export class RoomManager {
   private rooms: Map<string, RoomState> = new Map();
 
-  createRoom(hostPlayer: { id: string; name: string; avatar: string }): RoomState {
-    const code = this.generateUniqueCode();
+  createRoom(hostPlayer: { id: string; name: string; avatar: string }, forcedCode?: string): RoomState {
+    const code = (forcedCode || this.generateUniqueCode()).toUpperCase();
     const host: Player = {
       id: hostPlayer.id,
       name: hostPlayer.name.trim() || 'Host',

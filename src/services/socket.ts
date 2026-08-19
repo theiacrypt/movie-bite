@@ -41,9 +41,30 @@ export function getBackendBaseUrl(): string {
   return typeof window !== 'undefined' ? window.location.origin : '';
 }
 
+export function generateRoomCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+function getStoredPlayerId(): string {
+  if (typeof sessionStorage !== 'undefined') {
+    let pid = sessionStorage.getItem('movie_bite_player_id');
+    if (!pid) {
+      pid = `mb_${Math.random().toString(36).substring(2, 9)}`;
+      sessionStorage.setItem('movie_bite_player_id', pid);
+    }
+    return pid;
+  }
+  return `mb_${Math.random().toString(36).substring(2, 9)}`;
+}
+
 class CloudflareWorkerSocket implements UnifiedSocket {
   public connected = false;
-  public id = `cf_${Math.random().toString(36).substring(2, 9)}`;
+  public id = getStoredPlayerId();
   private ws: WebSocket | null = null;
   private listeners: Map<string, Set<Function>> = new Map();
   private callbackCounter = 0;
@@ -70,18 +91,38 @@ class CloudflareWorkerSocket implements UnifiedSocket {
   }
 
   public connect(): this {
+    this.openWebSocket();
+    return this;
+  }
+
+  private openWebSocket(payloadOnOpen?: string) {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-      return this;
+      if (payloadOnOpen && this.ws.readyState === WebSocket.OPEN) {
+        console.log('📡 [Socket] Sende Payload an bestehenden WebSocket:', payloadOnOpen);
+        this.ws.send(payloadOnOpen);
+      }
+      return;
+    }
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
     }
 
     try {
       const fullUrl = `${this.url}?playerId=${encodeURIComponent(this.id)}${this.roomCode ? `&code=${encodeURIComponent(this.roomCode)}` : ''}`;
+      console.log(`🔌 [Socket] Öffne WebSocket-Verbindung zu: ${fullUrl}`);
       this.ws = new WebSocket(fullUrl);
 
       this.ws.onopen = () => {
+        console.log(`✅ [Socket] WebSocket erfolgreich verbunden! PlayerID: ${this.id}, RoomCode: ${this.roomCode || '(keiner)'}`);
         this.connected = true;
         this.startHeartbeat();
         this.emitLocal('connect');
+        if (payloadOnOpen && this.ws?.readyState === WebSocket.OPEN) {
+          console.log('📤 [Socket] Sende aufgeschobenes Initial-Payload:', payloadOnOpen);
+          this.ws.send(payloadOnOpen);
+        }
       };
 
       this.ws.onmessage = (event) => {
@@ -89,11 +130,14 @@ class CloudflareWorkerSocket implements UnifiedSocket {
           const payload = JSON.parse(event.data);
           if (payload.event === 'pong') return;
 
+          console.log(`📥 [Socket] Nachricht empfangen: [${payload.event}]`, payload.data);
+
           if (payload.event && payload.event.startsWith('callback_')) {
             const cbId = payload.event.replace('callback_', '');
             const cb = this.pendingCallbacks.get(cbId);
             if (cb) {
               this.pendingCallbacks.delete(cbId);
+              console.log(`🎯 [Socket] Callback aufgelöst für ID ${cbId}:`, payload.data);
               cb(payload.data);
             }
             return;
@@ -103,24 +147,47 @@ class CloudflareWorkerSocket implements UnifiedSocket {
             this.emitLocal(payload.event, payload.data);
           }
         } catch (e) {
-          console.error('Error parsing worker message:', e);
+          console.error('❌ [Socket] Fehler beim Parsen der Worker-Nachricht:', e);
         }
       };
 
-      this.ws.onclose = () => {
+      this.ws.onclose = (ev) => {
+        console.warn(`⚠️ [Socket] WebSocket getrennt (Code: ${ev.code}, Reason: ${ev.reason || 'keine'})`);
         this.handleDisconnect();
       };
 
       this.ws.onerror = (err) => {
+        console.error('❌ [Socket] WebSocket Fehler:', err);
         this.emitLocal('connect_error', err);
         this.handleDisconnect();
       };
     } catch (err) {
+      console.error('❌ [Socket] Fehler beim Erstellen des WebSockets:', err);
       this.emitLocal('connect_error', err);
       this.scheduleReconnect();
     }
+  }
 
-    return this;
+  private reconnectToRoom(code: string, payloadToSend?: string) {
+    console.log(`🔄 [Socket] Wechsle zu Raum [${code}] (Verbindung wird neu aufgebaut)...`);
+    this.roomCode = code;
+    this.stopHeartbeat();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.ws) {
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.onmessage = null;
+      this.ws.onopen = null;
+      try {
+        this.ws.close();
+      } catch (_) {}
+      this.ws = null;
+    }
+    this.connected = false;
+    this.openWebSocket(payloadToSend);
   }
 
   private handleDisconnect() {
@@ -132,9 +199,10 @@ class CloudflareWorkerSocket implements UnifiedSocket {
 
   private scheduleReconnect() {
     if (this.reconnectTimer) return;
+    console.log('⏱️ [Socket] Reconnect geplant in 2.5s...');
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.connect();
+      this.openWebSocket();
     }, 2500);
   }
 
@@ -158,7 +226,13 @@ class CloudflareWorkerSocket implements UnifiedSocket {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.stopHeartbeat();
     if (this.ws) {
-      this.ws.close();
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.onmessage = null;
+      this.ws.onopen = null;
+      try {
+        this.ws.close();
+      } catch (_) {}
       this.ws = null;
     }
     this.connected = false;
@@ -192,14 +266,36 @@ class CloudflareWorkerSocket implements UnifiedSocket {
   }
 
   public emit(event: string, data?: any, callback?: (...args: any[]) => void): this {
-    if (event === 'join_room' && data?.code) {
-      this.roomCode = data.code;
-    }
-
     let callbackId: string | undefined;
     if (callback) {
       callbackId = `cb_${++this.callbackCounter}_${Date.now()}`;
       this.pendingCallbacks.set(callbackId, callback);
+    }
+
+    console.log(`📤 [Socket.emit] Sende Event [${event}]:`, { data, callbackId });
+
+    if (event === 'create_room') {
+      const code = (data?.code || generateRoomCode()).toUpperCase().trim();
+      const payloadData = { ...data, code, playerId: this.id };
+      const payload = JSON.stringify({ event, data: payloadData, callbackId });
+      console.log(`🆕 [Socket.emit] create_room -> Ziel-Code: ${code}`);
+      this.reconnectToRoom(code, payload);
+      return this;
+    }
+
+    if (event === 'join_room') {
+      const code = (data?.code || '').toUpperCase().trim();
+      const payloadData = { ...data, code, playerId: this.id };
+      const payload = JSON.stringify({ event, data: payloadData, callbackId });
+      console.log(`🚪 [Socket.emit] join_room -> Ziel-Code: ${code}, Aktueller roomCode: ${this.roomCode}`);
+      if (code && this.roomCode !== code) {
+        this.reconnectToRoom(code, payload);
+      } else if (this.connected && this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(payload);
+      } else {
+        this.reconnectToRoom(code || this.roomCode, payload);
+      }
+      return this;
     }
 
     const payload = JSON.stringify({ event, data, callbackId });
@@ -207,12 +303,7 @@ class CloudflareWorkerSocket implements UnifiedSocket {
     if (this.connected && this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(payload);
     } else {
-      this.connect();
-      this.once('connect', () => {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(payload);
-        }
-      });
+      this.openWebSocket(payload);
     }
 
     return this;

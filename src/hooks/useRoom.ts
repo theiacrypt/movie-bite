@@ -46,19 +46,23 @@ export function useRoom() {
   }, []);
 
   const createRoom = useCallback((name: string, avatar: string) => {
+    console.log(`🎬 [useRoom] createRoom aufgerufen: Name="${name}", Avatar="${avatar}"`);
     setLoading(true);
     setError(null);
     const socket = socketRef.current;
 
     const performCreate = () => {
+      console.log('🚀 [useRoom] Sende create_room über Socket...');
       const timeout = setTimeout(() => {
         setLoading(false);
+        console.error('⏰ [useRoom] Timeout bei create_room');
         setError('Server antwortet nicht. Bitte stelle sicher, dass der Server läuft.');
       }, 6000);
 
       socket.emit('create_room', { name, avatar }, (res: any) => {
         clearTimeout(timeout);
         setLoading(false);
+        console.log('📦 [useRoom] Antwort auf create_room:', res);
         if (res && res.success) {
           setRoom(res.room);
           setPlayerId(res.playerId);
@@ -69,6 +73,7 @@ export function useRoom() {
     };
 
     if (!socket.connected) {
+      console.log('🔌 [useRoom] Socket nicht verbunden vor createRoom -> Verbinde...');
       socket.connect();
       socket.once('connect', () => {
         performCreate();
@@ -79,19 +84,24 @@ export function useRoom() {
   }, []);
 
   const joinRoom = useCallback((code: string, name: string, avatar: string) => {
+    const cleanCode = code.trim().toUpperCase();
+    console.log(`🚪 [useRoom] joinRoom aufgerufen: Code="${cleanCode}", Name="${name}", Avatar="${avatar}"`);
     setLoading(true);
     setError(null);
     const socket = socketRef.current;
 
     const performJoin = () => {
+      console.log(`🚀 [useRoom] Sende join_room für Code="${cleanCode}" über Socket...`);
       const timeout = setTimeout(() => {
         setLoading(false);
+        console.error(`⏰ [useRoom] Timeout bei join_room für Code="${cleanCode}"`);
         setError('Server antwortet nicht. Bitte überprüfe den Raumcode oder deine Verbindung.');
       }, 6000);
 
-      socket.emit('join_room', { code, name, avatar }, (res: any) => {
+      socket.emit('join_room', { code: cleanCode, name, avatar }, (res: any) => {
         clearTimeout(timeout);
         setLoading(false);
+        console.log(`📦 [useRoom] Antwort auf join_room [${cleanCode}]:`, res);
         if (res && res.success) {
           setRoom(res.room);
           setPlayerId(res.playerId);
@@ -102,6 +112,7 @@ export function useRoom() {
     };
 
     if (!socket.connected) {
+      console.log('🔌 [useRoom] Socket nicht verbunden vor joinRoom -> Verbinde...');
       socket.connect();
       socket.once('connect', () => {
         performJoin();

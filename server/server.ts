@@ -80,14 +80,14 @@ io.on('connection', (socket) => {
   let currentRoomCode: string | null = null;
   let currentPlayerId: string | null = null;
 
-  socket.on('create_room', (data: { name: string; avatar: string }, callback) => {
+  socket.on('create_room', (data: { name: string; avatar: string; code?: string }, callback) => {
     const playerId = socket.id;
     currentPlayerId = playerId;
     const room = roomManager.createRoom({
       id: playerId,
       name: data.name,
       avatar: data.avatar
-    });
+    }, data?.code);
     currentRoomCode = room.code;
     socket.join(room.code);
     if (callback) callback({ success: true, room, playerId });
