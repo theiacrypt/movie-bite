@@ -92,7 +92,34 @@ export class RoomManager {
     const room = this.getRoom(code);
     if (!room) return null;
 
-    // Do not immediately delete player to protect from temporary reload / network glitches
+    const playerIndex = room.players.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) return room;
+
+    const wasHost = room.hostId === playerId;
+    room.players.splice(playerIndex, 1);
+
+    // If no players left, delete room
+    if (room.players.length === 0) {
+      this.rooms.delete(code.toUpperCase());
+      return null;
+    }
+
+    // If leaving player was host, assign host to first remaining player
+    if (wasHost && room.players.length > 0) {
+      room.hostId = room.players[0].id;
+      room.players[0].isHost = true;
+    }
+
+    // If in ROUND_2_VOTE, remove their vote entry and check if remaining players finished voting
+    if (room.phase === 'ROUND_2_VOTE') {
+      delete room.votes[playerId];
+      const allFinished = room.players.length > 0 && room.players.every(p => p.hasFinishedVoting);
+      if (allFinished) {
+        room.phase = 'WINNER_SHOWDOWN';
+        this.calculateResults(room);
+      }
+    }
+
     return room;
   }
 

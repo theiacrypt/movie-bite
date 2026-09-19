@@ -7,7 +7,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api/auth': {
-        target: 'https://suppenstudios-auth.suppenchris.workers.dev',
+        target: 'https://auth.suppenstudios.work',
         changeOrigin: true,
         secure: true,
       },

@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenShare?: () => void;
   onOpenAuth?: () => void;
   onOpenFavorites?: () => void;
+  onLeaveRoom?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,11 +18,13 @@ export const Header: React.FC<HeaderProps> = ({
   playerCount,
   onOpenShare,
   onOpenAuth,
-  onOpenFavorites
+  onOpenFavorites,
+  onLeaveRoom
 }) => {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(suppenstudiosAuth.getUser());
   const [favCount, setFavCount] = useState(suppenstudiosAuth.getFavorites().length);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -199,14 +202,60 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={onOpenShare}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-theater-850 hover:bg-theater-800 border border-cinema-red/30 hover:border-cinema-red/60 text-xs font-semibold text-cinema-red transition-all shadow-sm active:scale-95"
+                title="Einladungslink & Code teilen"
               >
                 <Share2 className="w-3.5 h-3.5" />
                 <span className="font-mono tracking-wider">{roomCode}</span>
               </button>
+
+              {onLeaveRoom && (
+                <button
+                  onClick={() => setShowLeaveConfirm(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 hover:border-red-500/60 text-xs font-semibold text-red-300 hover:text-red-200 transition-all shadow-sm active:scale-95"
+                  title="Raum verlassen"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Verlassen</span>
+                </button>
+              )}
             </>
           )}
         </div>
       </div>
+
+      {/* Leave Confirmation Modal */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-theater-900 border border-red-500/30 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center mx-auto">
+              <LogOut className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-lg text-white">Runde verlassen?</h3>
+              <p className="text-xs text-slate-300 mt-1">
+                Möchtest du den Raum <span className="font-mono font-bold text-amber-400">[{roomCode}]</span> wirklich verlassen? Du kehrst zum Hauptbildschirm zurück.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="py-2.5 px-4 rounded-xl bg-theater-800 hover:bg-theater-750 text-slate-300 font-semibold text-xs transition border border-white/10"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={() => {
+                  setShowLeaveConfirm(false);
+                  onLeaveRoom?.();
+                }}
+                className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs shadow-lg shadow-red-600/30 transition active:scale-95"
+              >
+                Ja, verlassen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

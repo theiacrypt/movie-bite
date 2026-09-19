@@ -335,6 +335,40 @@ export class RoomDurableObject {
         this.broadcastRoom();
         break;
       }
+
+      case 'leave_room': {
+        if (!this.room) {
+          sendResponse({ success: true });
+          return;
+        }
+
+        const playerIndex = this.room.players.findIndex(p => p.id === client.playerId);
+        if (playerIndex >= 0) {
+          const wasHost = this.room.hostId === client.playerId;
+          this.room.players.splice(playerIndex, 1);
+
+          if (this.room.players.length > 0) {
+            if (wasHost) {
+              this.room.hostId = this.room.players[0].id;
+              this.room.players[0].isHost = true;
+            }
+
+            if (this.room.phase === 'ROUND_2_VOTE') {
+              delete this.room.votes[client.playerId];
+              const allFinished = this.room.players.length > 0 && this.room.players.every(p => p.hasFinishedVoting);
+              if (allFinished) {
+                this.room.phase = 'WINNER_SHOWDOWN';
+                this.calculateResults();
+              }
+            }
+          }
+        }
+
+        await this.saveRoom();
+        sendResponse({ success: true });
+        this.broadcastRoom();
+        break;
+      }
     }
   }
 

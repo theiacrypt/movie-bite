@@ -180,13 +180,24 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('disconnect', () => {
+  socket.on('leave_room', (callback) => {
     if (currentRoomCode && currentPlayerId) {
-      const updated = roomManager.leaveRoom(currentRoomCode, currentPlayerId);
+      const roomCode = currentRoomCode;
+      const playerId = currentPlayerId;
+      currentRoomCode = null;
+      socket.leave(roomCode);
+      const updated = roomManager.leaveRoom(roomCode, playerId);
       if (updated) {
-        io.to(currentRoomCode).emit('room_updated', updated);
+        io.to(roomCode).emit('room_updated', updated);
       }
+      if (callback) callback({ success: true });
+    } else {
+      if (callback) callback({ success: true });
     }
+  });
+
+  socket.on('disconnect', () => {
+    // Keep disconnected player in room to allow reload/reconnect
   });
 });
 

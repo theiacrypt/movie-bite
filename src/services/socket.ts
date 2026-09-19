@@ -20,25 +20,42 @@ export function getBackendBaseUrl(): string {
     (import.meta.env.VITE_BACKEND_URL as string);
 
   if (customUrl) {
-    return customUrl.replace(/\/+$/, '');
+    if (!customUrl.includes('movie-bite-worker.suppenchris.workers.dev')) {
+      return customUrl.replace(/\/+$/, '');
+    }
+    try {
+      localStorage.removeItem('MOVIE_BITE_BACKEND_URL');
+    } catch (_) {}
   }
 
+  // If in browser:
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname.toLowerCase();
+
+    // In production on movie-bite.suppenstudios.work or any suppenstudios subdomain
+    if (hostname === 'movie-bite.suppenstudios.work' || hostname.endsWith('suppenstudios.work')) {
+      return window.location.origin;
+    }
+
+    // Local Gateway (wrangler dev on port 8787)
+    if (window.location.port === '8787') {
+      return window.location.origin;
+    }
+
+    // Cloudflare Pages or external preview -> fallback to production domain
+    if (hostname.includes('pages.dev')) {
+      return 'https://movie-bite.suppenstudios.work';
+    }
+  }
+
+  // Standalone dev server (running express backend on 3001)
   if (isDev) {
     return 'http://localhost:3001';
   }
 
-  // If on Pages or custom domain, fallback to Cloudflare Worker backend
-  if (
-    typeof window !== 'undefined' &&
-    (window.location.hostname.includes('pages.dev') ||
-      window.location.hostname.includes('suppenstudios.work') ||
-      window.location.hostname.includes('localhost') ||
-      window.location.hostname.includes('127.0.0.1'))
-  ) {
-    return 'https://movie-bite-worker.suppenchris.workers.dev';
-  }
-
-  return typeof window !== 'undefined' ? window.location.origin : '';
+  return typeof window !== 'undefined' && window.location.origin
+    ? window.location.origin
+    : 'https://movie-bite.suppenstudios.work';
 }
 
 export function generateRoomCode(): string {
@@ -78,6 +95,7 @@ class CloudflareWorkerSocket implements UnifiedSocket {
   private listeners: Map<string, Set<Function>> = new Map();
   private callbackCounter = 0;
   private pendingCallbacks: Map<string, Function> = new Map();
+  private queuedPayloads: string[] = [];
   private reconnectTimer: any = null;
   private pingInterval: any = null;
   private url: string;
@@ -104,11 +122,25 @@ class CloudflareWorkerSocket implements UnifiedSocket {
     return this;
   }
 
+  private flushQueue() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    while (this.queuedPayloads.length > 0) {
+      const payload = this.queuedPayloads.shift();
+      if (payload) {
+        console.log('📤 [Socket] Sende aufgeschobenes Payload:', payload);
+        this.ws.send(payload);
+      }
+    }
+  }
+
   private openWebSocket(payloadOnOpen?: string) {
+    if (payloadOnOpen) {
+      this.queuedPayloads.push(payloadOnOpen);
+    }
+
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-      if (payloadOnOpen && this.ws.readyState === WebSocket.OPEN) {
-        console.log('📡 [Socket] Sende Payload an bestehenden WebSocket:', payloadOnOpen);
-        this.ws.send(payloadOnOpen);
+      if (this.ws.readyState === WebSocket.OPEN) {
+        this.flushQueue();
       }
       return;
     }
@@ -119,7 +151,7 @@ class CloudflareWorkerSocket implements UnifiedSocket {
     }
 
     try {
-      const fullUrl = `${this.url}?playerId=${encodeURIComponent(this.id)}${this.roomCode ? `&code=${encodeURIComponent(this.roomCode)}` : ''}`;
+      const fullUrl = `${this.url}?playerId=${encodeURIComponent(this.id)}${this.roomCode ? `&code=${encodeURIComponent(this.roomCode)}` : ''}&app=movie-bite`;
       console.log(`🔌 [Socket] Öffne WebSocket-Verbindung zu: ${fullUrl}`);
       this.ws = new WebSocket(fullUrl);
 
@@ -128,10 +160,7 @@ class CloudflareWorkerSocket implements UnifiedSocket {
         this.connected = true;
         this.startHeartbeat();
         this.emitLocal('connect');
-        if (payloadOnOpen && this.ws?.readyState === WebSocket.OPEN) {
-          console.log('📤 [Socket] Sende aufgeschobenes Initial-Payload:', payloadOnOpen);
-          this.ws.send(payloadOnOpen);
-        }
+        this.flushQueue();
       };
 
       this.ws.onmessage = (event) => {
@@ -168,7 +197,6 @@ class CloudflareWorkerSocket implements UnifiedSocket {
       this.ws.onerror = (err) => {
         console.error('❌ [Socket] WebSocket Fehler:', err);
         this.emitLocal('connect_error', err);
-        this.handleDisconnect();
       };
     } catch (err) {
       console.error('❌ [Socket] Fehler beim Erstellen des WebSockets:', err);
@@ -342,6 +370,8 @@ export function getSocket(): UnifiedSocket {
     const isWorker =
       serverUrl.includes('workers.dev') ||
       serverUrl.includes('pages.dev') ||
+      serverUrl.includes('suppenstudios.work') ||
+      serverUrl.includes(':8787') ||
       serverUrl.includes('/ws') ||
       (!isDev && serverUrl.startsWith('http'));
 

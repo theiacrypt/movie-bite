@@ -37,9 +37,7 @@ export function useRoom() {
     socket.on('disconnect', onDisconnect);
     socket.on('room_updated', handleRoomUpdated);
 
-    if (!socket.connected) {
-      socket.connect();
-    }
+    let hasCodeToJoin = false;
 
     // Auto-reconnect if active room was stored in localStorage or URL
     if (typeof window !== 'undefined') {
@@ -52,6 +50,7 @@ export function useRoom() {
       const savedAvatar = localStorage.getItem('movie_bite_player_avatar') || '🍿';
 
       if (codeToJoin && !room) {
+        hasCodeToJoin = true;
         console.log(`🔄 [useRoom] Automatische Wiederverbindung zu Raum [${codeToJoin}]...`);
         socket.emit('join_room', {
           code: codeToJoin,
@@ -69,6 +68,10 @@ export function useRoom() {
           }
         });
       }
+    }
+
+    if (!hasCodeToJoin && !socket.connected) {
+      socket.connect();
     }
 
     return () => {
@@ -110,15 +113,7 @@ export function useRoom() {
       });
     };
 
-    if (!socket.connected) {
-      console.log('🔌 [useRoom] Socket nicht verbunden vor createRoom -> Verbinde...');
-      socket.connect();
-      socket.once('connect', () => {
-        performCreate();
-      });
-    } else {
-      performCreate();
-    }
+    performCreate();
   }, []);
 
   const joinRoom = useCallback((code: string, name: string, avatar: string) => {
@@ -150,19 +145,14 @@ export function useRoom() {
           }
         } else {
           setError(res?.error || 'Raum nicht gefunden');
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem('movie_bite_active_room');
+          }
         }
       });
     };
 
-    if (!socket.connected) {
-      console.log('🔌 [useRoom] Socket nicht verbunden vor joinRoom -> Verbinde...');
-      socket.connect();
-      socket.once('connect', () => {
-        performJoin();
-      });
-    } else {
-      performJoin();
-    }
+    performJoin();
   }, []);
 
   const updateSettings = useCallback((settings: Partial<RoomSettings>) => {
@@ -209,6 +199,10 @@ export function useRoom() {
   }, []);
 
   const leaveRoom = useCallback(() => {
+    const socket = socketRef.current;
+    if (socket && socket.connected) {
+      socket.emit('leave_room', () => {});
+    }
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('movie_bite_active_room');
     }
@@ -218,6 +212,7 @@ export function useRoom() {
       window.history.replaceState({}, '', url.toString());
     }
     setRoom(null);
+    setError(null);
   }, []);
 
   return {

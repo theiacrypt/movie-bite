@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Trophy, Star, Heart, ThumbsDown, Sparkles, RotateCcw, ExternalLink, Play, Film, MessageSquare, Medal, MinusCircle } from 'lucide-react';
+import { Trophy, Star, Heart, ThumbsDown, Sparkles, RotateCcw, ExternalLink, Play, Film, MessageSquare, Medal, MinusCircle, LogOut } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { MovieScore, Movie } from '../types/game.js';
 import { soundFx } from '../services/soundEffects.js';
@@ -11,13 +11,15 @@ interface WinnerShowdownProps {
   isHost: boolean;
   onRestartGame: () => void;
   onOpenReview?: (movie: Movie) => void;
+  onLeaveRoom?: () => void;
 }
 
 export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
   results,
   isHost,
   onRestartGame,
-  onOpenReview
+  onOpenReview,
+  onLeaveRoom
 }) => {
   const winner = results[0];
   const [winnerFaved, setWinnerFaved] = useState(false);
@@ -293,21 +295,36 @@ export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
         </div>
       )}
 
-      {/* Restart / Play Again Button */}
-      {isHost && (
-        <div className="text-center pt-4">
+      {/* Restart / Play Again & Leave Room Buttons */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+        {isHost && (
           <button
             onClick={() => {
               soundFx.playPop();
               onRestartGame();
             }}
-            className="px-8 py-4 rounded-2xl bg-theater-850 hover:bg-theater-800 text-white font-bold text-sm inline-flex items-center gap-2.5 border border-white/15 shadow-xl transition-all active:scale-95"
+            className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-theater-850 hover:bg-theater-800 text-white font-bold text-sm inline-flex items-center justify-center gap-2.5 border border-white/15 shadow-xl transition-all active:scale-95"
           >
             <RotateCcw className="w-4 h-4 text-cinema-red" />
-            <span>Neuen Durchgang im gleichen Raum starten</span>
+            <span>Neuen Durchgang starten</span>
           </button>
-        </div>
-      )}
+        )}
+
+        {onLeaveRoom && (
+          <button
+            onClick={() => {
+              soundFx.playPop();
+              if (window.confirm('Möchtest du die Runde verlassen und zum Hauptmenü zurückkehren?')) {
+                onLeaveRoom();
+              }
+            }}
+            className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-red-950/30 hover:bg-red-900/50 text-red-300 hover:text-red-200 font-bold text-sm inline-flex items-center justify-center gap-2.5 border border-red-500/20 hover:border-red-500/40 shadow-xl transition-all active:scale-95"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Raum verlassen</span>
+          </button>
+        )}
+      </div>
 
       <MovieDetailModal
         movie={selectedDetailMovie}

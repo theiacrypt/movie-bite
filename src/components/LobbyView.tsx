@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Crown, CheckCircle, Clock, Play, Share2, Sparkles, Shield, Bell, BellRing, Sliders, LogIn } from 'lucide-react';
+import { Users, Crown, CheckCircle, Clock, Play, Share2, Sparkles, Shield, Bell, BellRing, Sliders, LogIn, LogOut } from 'lucide-react';
 import { RoomState, RoomSettings } from '../types/game.js';
 import { soundFx } from '../services/soundEffects.js';
 import { notificationService } from '../services/notificationService.js';
@@ -13,6 +13,7 @@ interface LobbyViewProps {
   onOpenShare: () => void;
   onUpdateSettings?: (settings: Partial<RoomSettings>) => void;
   onOpenAuth?: () => void;
+  onLeaveRoom?: () => void;
 }
 
 export const LobbyView: React.FC<LobbyViewProps> = ({
@@ -22,7 +23,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onStartRound1,
   onOpenShare,
   onUpdateSettings,
-  onOpenAuth
+  onOpenAuth,
+  onLeaveRoom
 }) => {
   const isHost = room.hostId === currentPlayerId;
   const me = room.players.find(p => p.id === currentPlayerId);
@@ -109,6 +111,22 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               >
                 <CheckCircle className="w-4 h-4" />
                 <span>{me?.isReady ? 'Ich bin bereit!' : 'Bereit machen'}</span>
+              </button>
+            )}
+
+            {onLeaveRoom && (
+              <button
+                onClick={() => {
+                  soundFx.playPop();
+                  if (window.confirm('Möchtest du diese Runde wirklich verlassen?')) {
+                    onLeaveRoom();
+                  }
+                }}
+                className="px-4 py-3 rounded-2xl bg-red-950/30 hover:bg-red-900/50 border border-red-500/20 hover:border-red-500/40 text-xs font-semibold text-red-300 flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
+                title="Raum verlassen"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Verlassen</span>
               </button>
             )}
           </div>

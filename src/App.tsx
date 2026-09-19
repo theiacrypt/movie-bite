@@ -38,7 +38,8 @@ export function App() {
     addMovie,
     removeMovie,
     submitVotes,
-    restartGame
+    restartGame,
+    leaveRoom
   } = useRoom();
 
   const prevPhaseRef = useRef<string | null>(null);
@@ -89,6 +90,7 @@ export function App() {
         onOpenShare={() => setIsShareOpen(true)}
         onOpenAuth={() => suppenstudiosAuth.redirectToSSO()}
         onOpenFavorites={() => setIsFavoritesOpen(true)}
+        onLeaveRoom={leaveRoom}
       />
 
       <main className="flex-1 pb-12">
@@ -113,6 +115,7 @@ export function App() {
             onOpenShare={() => setIsShareOpen(true)}
             onUpdateSettings={updateSettings}
             onOpenAuth={() => suppenstudiosAuth.redirectToSSO()}
+            onLeaveRoom={leaveRoom}
           />
         ) : room.phase === 'ROUND_1_SUGGEST' ? (
           <Round1Suggestions
@@ -136,6 +139,7 @@ export function App() {
             isHost={room.hostId === playerId}
             onRestartGame={restartGame}
             onOpenReview={openReview}
+            onLeaveRoom={leaveRoom}
           />
         )}
       </main>

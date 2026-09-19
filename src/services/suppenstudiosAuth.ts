@@ -66,8 +66,11 @@ const getApiBase = () => {
   if (typeof window !== 'undefined') {
     const custom = localStorage.getItem('suppenstudios_auth_api_url');
     if (custom) return custom;
+    if (window.location.hostname.endsWith('suppenstudios.work')) {
+      return 'https://auth.suppenstudios.work';
+    }
   }
-  return 'https://suppenstudios-auth.suppenchris.workers.dev';
+  return 'https://auth.suppenstudios.work';
 };
 
 export { getBackendBaseUrl } from './socket.js';

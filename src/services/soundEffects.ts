@@ -6,6 +6,9 @@ class SoundManager {
   playDislike() {}
   playSuperlike() {}
   playFanfare() {}
+  playWinner() {}
+  playMatch() {}
+  playCountdown() {}
 }
 
 export const soundFx = new SoundManager();
