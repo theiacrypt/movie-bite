@@ -315,6 +315,10 @@ export const Round1Suggestions: React.FC<Round1SuggestionsProps> = ({
       <MovieDetailModal
         movie={selectedDetailMovie}
         onClose={() => setSelectedDetailMovie(null)}
+        onOpenReviews={onOpenReview ? (m) => {
+          setSelectedDetailMovie(null);
+          onOpenReview(m);
+        } : undefined}
       />
     </div>
   );

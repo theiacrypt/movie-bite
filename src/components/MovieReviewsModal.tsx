@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { suppenstudiosAuth, Review, User, isChefUser } from '../services/suppenstudiosAuth.js';
 import { tasteProfileService, REVIEW_CATEGORIES, ReviewCategoryOption } from '../services/tasteProfile.js';
+import { parseReviewContent, resolveReviewTag, formatReviewDate } from '../utils/reviewParser.js';
 
 interface MovieReviewsModalProps {
   movieId: string | number;
@@ -40,6 +41,7 @@ interface ReviewWithLocal extends Review {
   _helpfulLocal?: boolean;
   _helpfulCount?: number;
   _parsedTags?: string[];
+  _hasSpoiler?: boolean;
 }
 
 export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
@@ -79,22 +81,17 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
     try {
       const res = await suppenstudiosAuth.getMovieReviews(movieId);
       // Sort: Chef always first, then by date
-      const sorted = (res.reviews || []).map(r => {
-        let text = r.review_text || '';
-        let tags: string[] = [];
-        const match = text.match(/\[TAGS:\s*([^\]]+)\]/);
-        if (match) {
-          tags = match[1].split(',').map(t => t.trim());
-          text = text.replace(/\[TAGS:\s*[^\]]+\]/, '').trim();
-        }
+      const sorted: ReviewWithLocal[] = (res.reviews || []).map(r => {
+        const parsed = parseReviewContent(r.review_text);
         return {
           ...r,
-          review_text: text,
-          _parsedTags: tags
+          review_text: parsed.cleanText,
+          _parsedTags: parsed.tags.map(t => t.id),
+          _hasSpoiler: parsed.hasSpoiler,
         };
       }).sort((a, b) => {
-        if (isChef(a.username) && !isChef(b.username)) return -1;
-        if (!isChef(a.username) && isChef(b.username)) return 1;
+        if (isChef(a) && !isChef(b)) return -1;
+        if (!isChef(a) && isChef(b)) return 1;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 
@@ -106,20 +103,27 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
         tasteProfileService.recordReviewRead(rev, movieId);
       });
 
+      // Reset before populating my existing review for this movie
+      setRating(7);
+      setSelectedTags([]);
+      setReviewText('');
+      setHasSpoiler(false);
+
       // Populate my existing review if any
       const enrichedList = tasteProfileService.getEnrichedReviews();
       const myLocal = enrichedList.find(e => String(e.movieId) === String(movieId));
+      const myRev = currentUser ? sorted.find(r => r.user_id === currentUser.id) : undefined;
       if (myLocal) {
+        const localParsed = parseReviewContent(myLocal.reviewText || '');
         setRating(myLocal.rating);
-        setSelectedTags(myLocal.selectedTags || []);
-        setReviewText(myLocal.reviewText || '');
-      } else if (currentUser) {
-        const myRev = sorted.find(r => r.user_id === currentUser.id);
-        if (myRev) {
-          setRating(myRev.rating);
-          setReviewText(myRev.review_text || '');
-          if (myRev._parsedTags?.length) setSelectedTags(myRev._parsedTags);
-        }
+        setSelectedTags(myLocal.selectedTags?.length ? myLocal.selectedTags : localParsed.tags.map(t => t.id));
+        setReviewText(localParsed.cleanText);
+        setHasSpoiler(Boolean(myLocal.hasSpoiler || localParsed.hasSpoiler));
+      } else if (myRev) {
+        setRating(myRev.rating);
+        setReviewText(myRev.review_text || '');
+        if (myRev._parsedTags?.length) setSelectedTags(myRev._parsedTags);
+        setHasSpoiler(Boolean(myRev._hasSpoiler));
       }
     } catch (err) {
       console.error('Fehler beim Laden der Reviews:', err);
@@ -179,6 +183,8 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
     try {
       await suppenstudiosAuth.deleteReview(reviewId);
       setFeedback({ type: 'success', text: 'Rezension gelöscht.' });
+      setRating(7);
+      setSelectedTags([]);
       setReviewText('');
       setHasSpoiler(false);
       await loadReviews();
@@ -208,9 +214,11 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
   };
 
   const getReviewText = (rev: ReviewWithLocal) => {
-    const text = rev.review_text || '';
-    if (text.startsWith('[SPOILER]')) return { text: text.slice(9), hasSpoiler: true };
-    return { text, hasSpoiler: false };
+    if (typeof rev._hasSpoiler === 'boolean') {
+      return { text: rev.review_text || '', hasSpoiler: rev._hasSpoiler };
+    }
+    const parsed = parseReviewContent(rev.review_text);
+    return { text: parsed.cleanText, hasSpoiler: parsed.hasSpoiler };
   };
 
   // Star rating color
@@ -564,10 +572,11 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
             ) : (
               <div className="space-y-3">
                 {reviews.map(rev => {
-                  const chef = isChef(rev.username);
+                  const chef = isChef(rev);
                   const { text: revText, hasSpoiler: spoiler } = getReviewText(rev);
                   const revealed = revealedSpoilers.has(rev.id);
                   const isOwn = currentUser?.id === rev.user_id;
+                  const parsedTags = rev._parsedTags || [];
 
                   return (
                     <div
@@ -607,7 +616,7 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
                               </span>
                             </div>
                             <span className="text-[10px] text-slate-500">
-                              {new Date(rev.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              {formatReviewDate(rev.created_at)}
                             </span>
                           </div>
                         </div>
@@ -631,18 +640,18 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Review text */}
-                      {revText && (
-                        <div>
-                          {spoiler && !revealed ? (
-                            <button
-                              onClick={() => toggleSpoilerReveal(rev.id)}
-                              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500/8 border border-amber-500/20 text-amber-400 text-xs font-semibold hover:bg-amber-500/15 transition-all"
-                            >
-                              <EyeOff className="w-3.5 h-3.5" />
-                              Spoiler verbergen — klicke zum Anzeigen
-                            </button>
-                          ) : (
+                      {/* Review text & tags */}
+                      {spoiler && !revealed ? (
+                        <button
+                          onClick={() => toggleSpoilerReveal(rev.id)}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500/8 border border-amber-500/20 text-amber-400 text-xs font-semibold hover:bg-amber-500/15 transition-all"
+                        >
+                          <EyeOff className="w-3.5 h-3.5" />
+                          Spoiler verborgen — klicke zum Anzeigen
+                        </button>
+                      ) : (
+                        <>
+                          {revText && (
                             <div className="relative">
                               <p className={`text-xs leading-relaxed pl-1 ${chef ? 'text-amber-50' : 'text-slate-300'}`}>
                                 {revText}
@@ -657,28 +666,33 @@ export const MovieReviewsModal: React.FC<MovieReviewsModalProps> = ({
                               )}
                             </div>
                           )}
-                        </div>
-                      )}
 
-                      {/* Tags Pill Badges */}
-                      {rev._parsedTags && rev._parsedTags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 pt-1">
-                          {rev._parsedTags.map(tagId => {
-                            let label = tagId;
-                            for (const cat of Object.values(REVIEW_CATEGORIES)) {
-                              const opt = cat.options.find(o => o.id === tagId);
-                              if (opt) { label = opt.label; break; }
-                            }
-                            return (
-                              <span
-                                key={tagId}
-                                className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-theater-900 border border-white/10 text-slate-300"
-                              >
-                                {label}
-                              </span>
-                            );
-                          })}
-                        </div>
+                          {parsedTags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {parsedTags.map(tagId => (
+                                <span
+                                  key={tagId}
+                                  className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-theater-900 border border-white/10 text-slate-300"
+                                >
+                                  {resolveReviewTag(tagId).label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {!revText && parsedTags.length === 0 && (
+                            <p className="text-[11px] text-slate-500 italic">Nur Sternebewertung</p>
+                          )}
+
+                          {!revText && spoiler && revealed && (
+                            <button
+                              onClick={() => toggleSpoilerReveal(rev.id)}
+                              className="mt-1 text-[10px] text-amber-500 hover:text-amber-400 flex items-center gap-1 transition-colors"
+                            >
+                              <Eye className="w-3 h-3" /> Spoiler wieder verbergen
+                            </button>
+                          )}
+                        </>
                       )}
 
                       {/* Helpful vote */}

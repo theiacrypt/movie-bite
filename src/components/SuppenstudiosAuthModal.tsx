@@ -18,6 +18,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { suppenstudiosAuth, User, Review } from '../services/suppenstudiosAuth.js';
+import { parseReviewContent, formatReviewDate } from '../utils/reviewParser.js';
 
 interface SuppenstudiosAuthModalProps {
   isOpen: boolean;
@@ -526,21 +527,43 @@ export const SuppenstudiosAuthModal: React.FC<SuppenstudiosAuthModalProps> = ({ 
                 </p>
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {myReviews.map((rev) => (
-                    <div key={rev.id} className="p-3 rounded-xl bg-theater-950/80 border border-white/10 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">{rev.movie_title}</span>
-                        <span className="text-xs font-bold text-amber-400 px-2.5 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/20 inline-flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          <span>{rev.rating}/10</span>
-                        </span>
+                  {myReviews.map((rev) => {
+                    const { cleanText, hasSpoiler, tags } = parseReviewContent(rev.review_text);
+                    return (
+                      <div key={rev.id} className="p-3 rounded-xl bg-theater-950/80 border border-white/10 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-white truncate">{rev.movie_title}</span>
+                          <span className="text-xs font-bold text-amber-400 px-2.5 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/20 inline-flex items-center gap-1 shrink-0">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            <span>{rev.rating}/10</span>
+                          </span>
+                        </div>
+                        {hasSpoiler && (
+                          <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            Spoiler-Warnung
+                          </span>
+                        )}
+                        {cleanText && (
+                          <p className="text-xs text-slate-300 line-clamp-2 italic">„{cleanText}“</p>
+                        )}
+                        {tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-0.5">
+                            {tags.slice(0, 4).map(t => (
+                              <span key={t.id} className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-300 border border-white/10">
+                                {t.label}
+                              </span>
+                            ))}
+                            {tags.length > 4 && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10">
+                                +{tags.length - 4}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <p className="text-[10px] text-slate-500">{formatReviewDate(rev.created_at, { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
                       </div>
-                      {rev.review_text && (
-                        <p className="text-xs text-slate-300 line-clamp-2 italic">"{rev.review_text}"</p>
-                      )}
-                      <p className="text-[10px] text-slate-500">{new Date(rev.created_at).toLocaleDateString('de-DE')}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

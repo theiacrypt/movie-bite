@@ -1,12 +1,25 @@
 {
   "id": "movie-bite",
   "title": "Movie-Bite",
-  "description": "Die cineastische Echtzeit-App für deinen nächsten Filmabend. Movie-Bite ist natürlich eine Anspielung auf Movie Night – aber bei Suppenstudios musste einfach ein kulinarischer Wortwitz her! Gemeinsam Filme vorschlagen, per Like & Super-Vote abstimmen und das perfekte Heimkino-Menü servieren. 🍿🎬",
+  "category": "realtime",
+  "categoryLabel": "Realtime & Edge",
+  "subtitle": "Kollaborative Filmabend-Abstimmung in Echtzeit via Durable Objects",
+  "description": "Die cineastische Echtzeit-App für deinen nächsten Filmabend. Movie-Bite ist natürlich eine Anspielung auf Movie Night – aber bei Suppenstudios musste einfach ein kulinarischer Wortwitz her! Gemeinsam Filme vorschlagen, per Like & Super-Vote abstimmen und das perfekte Heimkino-Menü servieren.",
+  "problem": "Bei Filmabenden in der Gruppe zieht sich die Einigung endlos hin, Vorschläge gehen im Chat unter und persönliche Bewertungen sowie Geschmacksprofile fehlen.",
+  "solution": "Synchronisierte Mehrspieler-Räume über WebSockets mit Cloudflare Durable Objects: Alle schlagen Filme via TMDB-Suche vor, stimmen in zwei Runden inklusive Super-Vote ab und teilen Rezensionen mit detaillierten Taste-Tags.",
+  "howItWorks": "Ein Durable-Object-Raum hält den Live-Status für Vorschläge, Timer und Stimmen konsistent auf allen Geräten. Über die Suppenstudios ID werden Favoriten, Community-Rezensionen und individuelle Geschmacksprofile direkt in D1 SQL gespeichert.",
   "image": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
   "tags": [
     "React",
-    "Socket.IO",
-    "Filmabend",
-    "Lecker"
-  ]
+    "Durable Objects",
+    "WebSockets",
+    "TMDB",
+    "Filmabend"
+  ],
+  "badges": [
+    "2-Runden-Voting",
+    "Super-Vote",
+    "Community-Rezensionen"
+  ],
+  "url": "https://movie-bite.suppenstudios.work/"
 }

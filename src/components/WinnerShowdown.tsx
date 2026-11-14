@@ -329,6 +329,10 @@ export const WinnerShowdown: React.FC<WinnerShowdownProps> = ({
       <MovieDetailModal
         movie={selectedDetailMovie}
         onClose={() => setSelectedDetailMovie(null)}
+        onOpenReviews={onOpenReview ? (m) => {
+          setSelectedDetailMovie(null);
+          onOpenReview(m);
+        } : undefined}
       />
     </div>
   );

@@ -9,6 +9,7 @@ import { TrendingReviews } from './TrendingReviews.js';
 import { soundFx } from '../services/soundEffects.js';
 import { suppenstudiosAuth, Review, User } from '../services/suppenstudiosAuth.js';
 import { tasteProfileService, WatchedMovieItem, UserTasteProfile } from '../services/tasteProfile.js';
+import { parseReviewContent, formatReviewDate } from '../utils/reviewParser.js';
 
 interface WelcomeScreenProps {
   onCreateRoom: (name: string, avatar: string, settings?: { maxSuggestionsPerPlayer: number }) => void;
@@ -347,7 +348,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
               <div className="space-y-2.5">
                 {chefReviews.map(review => {
-                  const text = review.review_text?.replace(/^\[SPOILER\]/, '') || '';
+                  const { cleanText: text, hasSpoiler, tags } = parseReviewContent(review.review_text);
+                  const visibleTags = tags.slice(0, 3);
+                  const extraTags = tags.length - visibleTags.length;
                   return (
                     <div
                       key={review.id}
@@ -363,15 +366,40 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                           {review.rating}
                         </span>
                       </div>
-                      {text && (
-                        <p className="text-[10px] text-slate-400 leading-relaxed line-clamp-2">
-                          „{text}“
+                      {hasSpoiler ? (
+                        <p className="text-[10px] text-amber-400 font-medium">
+                          Spoiler-Warnung · Zum Lesen öffnen
                         </p>
+                      ) : (
+                        <>
+                          {text && (
+                            <p className="text-[10px] text-slate-400 leading-relaxed line-clamp-2">
+                              „{text}“
+                            </p>
+                          )}
+                          {visibleTags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 pt-0.5">
+                              {visibleTags.map(tag => (
+                                <span
+                                  key={tag.id}
+                                  className="text-[9px] px-1.5 py-0.5 rounded bg-cinema-gold/10 text-amber-200 border border-cinema-gold/20"
+                                >
+                                  {tag.label}
+                                </span>
+                              ))}
+                              {extraTags > 0 && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10">
+                                  +{extraTags}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </>
                       )}
                       <div className="flex items-center justify-between text-[9px] text-slate-600 pt-1">
                         <span className="flex items-center gap-1">
                           <MessageSquare className="w-2.5 h-2.5" />
-                          {new Date(review.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })}
+                          {formatReviewDate(review.created_at, { day: '2-digit', month: 'short' })}
                         </span>
                         <span className="text-cinema-gold font-bold hover:underline">
                           Rezension öffnen →

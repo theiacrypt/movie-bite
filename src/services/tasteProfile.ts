@@ -103,6 +103,7 @@ export interface EnrichedReviewData {
   moviePoster?: string;
   rating: number;
   reviewText?: string;
+  hasSpoiler?: boolean;
   selectedTags: string[];
   readReviewsPriorCount?: number;
   influenceAlignment?: 'confirmed_hype' | 'independent_contrarian' | 'neutral';
@@ -279,6 +280,7 @@ class TasteProfileService {
       moviePoster: params.moviePoster,
       rating: params.rating,
       reviewText: params.reviewText,
+      hasSpoiler: Boolean(params.hasSpoiler),
       selectedTags: params.selectedTags,
       readReviewsPriorCount: priorReads.length,
       influenceAlignment: alignment,

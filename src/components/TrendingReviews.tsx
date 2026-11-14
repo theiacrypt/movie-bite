@@ -4,6 +4,7 @@ import {
   ThumbsUp, Film, Sparkles, Quote, AlertTriangle
 } from 'lucide-react';
 import { suppenstudiosAuth, Review, isChefUser } from '../services/suppenstudiosAuth.js';
+import { parseReviewContent, formatReviewDate, ReviewTagSentiment } from '../utils/reviewParser.js';
 
 const DISPLAY_COUNT = 6;
 
@@ -30,18 +31,10 @@ function weightedShuffle(reviews: Review[], count: number): Review[] {
     .map(s => s.review);
 }
 
-function formatDate(dateStr: string) {
-  try {
-    return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' });
-  } catch { return ''; }
-}
-
-function cleanReviewText(text: string) {
-  return text?.replace(/^\[SPOILER\]/, '') ?? '';
-}
-
-function hasSpoiler(text: string) {
-  return text?.startsWith('[SPOILER]') ?? false;
+function tagPillClass(type: ReviewTagSentiment) {
+  if (type === 'positive') return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20';
+  if (type === 'negative') return 'bg-red-500/10 text-red-300 border-red-500/20';
+  return 'bg-white/5 text-slate-300 border-white/10';
 }
 
 /** Gibt eine farbige Klasse basierend auf der Bewertung zurück */
@@ -140,17 +133,19 @@ export const TrendingReviews: React.FC<TrendingReviewsProps> = ({ onOpenReview }
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {displayed.map((review, idx) => {
           const isChef    = isChefUser(review);
-          const spoiler   = hasSpoiler(review.review_text ?? '');
-          const text      = cleanReviewText(review.review_text ?? '');
+          const { cleanText: text, hasSpoiler: spoiler, tags } = parseReviewContent(review.review_text);
           const revealed  = revealedSpoilers.has(review.id);
           const likes     = (review as any).helpful_count ?? 0;
+          const visibleTags = tags.slice(0, 3);
+          const extraTagCount = tags.length - visibleTags.length;
 
           return (
             <div
               key={`${review.id}-${shuffleCount}`}
-              className={`flex flex-col rounded-2xl border overflow-hidden transition-all group animate-fadeIn
+              onClick={() => onOpenReview?.(review.movie_id, review.movie_title, review.movie_poster)}
+              className={`flex flex-col rounded-2xl border overflow-hidden transition-all group animate-fadeIn cursor-pointer
                 ${isChef
-                  ? 'bg-theater-900/90 border-cinema-gold/30 shadow-sm shadow-cinema-gold/10'
+                  ? 'bg-theater-900/90 border-cinema-gold/30 hover:border-cinema-gold/60 shadow-sm shadow-cinema-gold/10'
                   : 'bg-theater-900/60 border-white/8 hover:border-cinema-red/30'
                 }`}
               style={{ animationDelay: `${idx * 60}ms` }}
@@ -167,10 +162,7 @@ export const TrendingReviews: React.FC<TrendingReviewsProps> = ({ onOpenReview }
               )}
 
               {/* Movie info row */}
-              <div
-                className="flex items-center gap-3 px-3 pt-3 pb-2 cursor-pointer"
-                onClick={() => onOpenReview?.(review.movie_id, review.movie_title, review.movie_poster)}
-              >
+              <div className="flex items-center gap-3 px-3 pt-3 pb-2">
                 {/* Poster thumbnail */}
                 <div className="w-9 h-12 rounded-lg overflow-hidden shrink-0 bg-theater-800 poster-scanlines">
                   {review.movie_poster ? (
@@ -202,32 +194,58 @@ export const TrendingReviews: React.FC<TrendingReviewsProps> = ({ onOpenReview }
                 <MessageSquare className="w-3.5 h-3.5 text-slate-600 group-hover:text-cinema-red transition-colors shrink-0" />
               </div>
 
-              {/* Review text */}
-              <div className="px-3 pb-2 flex-1">
-                {text ? (
+              {/* Review text & tags */}
+              <div className="px-3 pb-2.5 flex-1 space-y-2">
+                {text || tags.length > 0 ? (
                   spoiler && !revealed ? (
                     <button
-                      onClick={() => toggleSpoiler(review.id)}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleSpoiler(review.id); }}
                       className="w-full text-[10px] text-amber-400 bg-amber-500/8 border border-amber-500/20 rounded-lg py-1.5 font-semibold hover:bg-amber-500/15 transition-colors flex items-center justify-center gap-1.5"
                     >
                       <AlertTriangle className="w-3 h-3 text-amber-400" />
                       <span>Spoiler — Tippen zum Anzeigen</span>
                     </button>
                   ) : (
-                    <div>
-                      <Quote className="w-3 h-3 text-slate-700 mb-1" />
-                      <p className={`text-[11px] leading-relaxed line-clamp-3 ${isChef ? 'text-amber-50' : 'text-slate-300'}`}>
-                        {text}
-                      </p>
+                    <div className="space-y-1.5">
+                      {text && (
+                        <div>
+                          <Quote className="w-3 h-3 text-slate-700 mb-1" />
+                          <p className={`text-[11px] leading-relaxed line-clamp-3 ${isChef ? 'text-amber-50' : 'text-slate-300'}`}>
+                            {text}
+                          </p>
+                        </div>
+                      )}
+                      {visibleTags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {visibleTags.map(tag => (
+                            <span
+                              key={tag.id}
+                              className={`text-[9px] font-medium px-1.5 py-0.5 rounded-md border ${tagPillClass(tag.type)}`}
+                            >
+                              {tag.label}
+                            </span>
+                          ))}
+                          {extraTagCount > 0 && (
+                            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-md bg-white/5 text-slate-400 border border-white/10">
+                              +{extraTagCount}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {spoiler && revealed && (
-                        <button onClick={() => toggleSpoiler(review.id)} className="text-[9px] text-amber-500 mt-1 hover:text-amber-400">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); toggleSpoiler(review.id); }}
+                          className="text-[9px] text-amber-500 mt-1 hover:text-amber-400"
+                        >
                           Spoiler verbergen
                         </button>
                       )}
                     </div>
                   )
                 ) : (
-                  <p className="text-[11px] text-slate-600 italic">Keine Textrezension</p>
+                  <p className="text-[11px] text-slate-500 italic">Nur Sternebewertung</p>
                 )}
               </div>
 
@@ -246,7 +264,7 @@ export const TrendingReviews: React.FC<TrendingReviewsProps> = ({ onOpenReview }
                     {review.username ?? 'Anonym'}
                   </span>
                   <span className="text-[9px] text-slate-600">
-                    · {formatDate(review.created_at)}
+                    · {formatReviewDate(review.created_at)}
                   </span>
                 </div>
 
